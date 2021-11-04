@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
-from BBST import *
+
+from .bbst_node import BBST_Node
+from .type_hint import *
 
 
 @dataclass
-class AVL_Node(BBST):
+class AVL_Node(BBST_Node):
 
 
     height: int   = field(default=0, compare=False)
@@ -22,10 +24,7 @@ class AVL_Node(BBST):
         return self
 
 
-    def insert(self, value: T) -> Union['BBST', None]:
-        if self.value is None: 
-            self.value = value
-
+    def insert(self, value: CT) -> Union['BBST', None]:
         new_node = self._insert(value)
         if new_node: 
             # only update the node if a new node has been inserted into the binary tree
@@ -33,7 +32,7 @@ class AVL_Node(BBST):
             return new_node._update() 
 
 
-    def delete(self, value: T) -> None: 
+    def delete(self, value: CT) -> None: 
         new_root = None 
 
         node_to_delete = self.find(value) 
@@ -152,38 +151,6 @@ class AVL_Node(BBST):
         self.b_factor = right_height - left_height
 
 
-class AVL:
 
-    def __init__(self):
-        self.root = None
-
-
-    def insert(self, value):
-        if self.root == None:
-            self.root = AVL_Node()
-        new_root = self.root.insert(value)
-        if new_root != None:
-            self.root = new_root
-
-
-    def delete(self, value):
-        new_root = self.root.delete(value)
-        if new_root != None:
-            self.root = new_root
-
-    def find_node(self, value):
-        return self.root.find(value)
-
-
-    def find_max_node(self):
-        return self.root.find_max()
-
-
-    def find_min_node(self):
-        return self.root.find_min()
-
-
-    def traverse(self, key='in'):
-        return self.root.traverse(key)
 
 

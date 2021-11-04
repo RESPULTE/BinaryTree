@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
-from BBST import *
+from .bbst_node  import BBST_Node
+from .type_hint  import *
 
 
 @dataclass
-class RBT_Node(BBST):
+class RBT_Node(BBST_Node):
 
 
     is_red: bool = field(default=True, compare=False)
@@ -17,7 +18,11 @@ class RBT_Node(BBST):
         else:
             return False
 
-    def insert(self, value: T) -> Union['BBST', None]:
+
+    def insert(self, value: CT) -> Union['RBT', None]:
+        if self.parent is None: 
+            self.is_red = False
+
         new_node = self._insert(value)
 
         if new_node: 
@@ -97,16 +102,16 @@ class RBT_Node(BBST):
             return self
 
 
-    def delete(self, value: T) -> None:     
+    def delete(self, value: CT) -> None:     
         node_to_delete = self.find(value) 
         if node_to_delete == None:
             raise ValueError(f'{value} is not in {self.__class__.__name__}')
 
-        deleted_node = node_to_delete._delete_node()
+        double_black = True if not node_to_delete.get_red_child() else False
 
-        double_black = True if not deleted_node.get_red_child() else False
+        node_to_delete._delete_node()
 
-        new_root = deleted_node._update_delete(double_black)
+        new_root = node_to_delete._update_delete(double_black)
 
         return new_root
 
@@ -120,6 +125,7 @@ class RBT_Node(BBST):
             new_root = self._resolve_double_black()
 
         return new_root
+
 
     def _resolve_double_black(self):
         '''
@@ -187,17 +193,19 @@ class RBT_Node(BBST):
                                   15(DB)
         '''
 
-        if self.sibling.is_red is False:
+        if not self.sibling.is_red:
             red_child = self.sibling.get_red_child()
+
             if red_child:
-                red_child.is_red    = False
                 self.sibling.is_red = self.parent.is_red
+                red_child.is_red    = False
                 self.parent.is_red  = False
 
-                if self.parent.left == self:
-                    self.parent._rotate_right()
-                else:
+                if self.parent.right == self.sibling:
                     self.parent._rotate_left()
+                else:
+                    self.parent._rotate_right()
+                return self.get_root()
 
             else:
                 self.sibling.is_red = True
@@ -209,90 +217,9 @@ class RBT_Node(BBST):
             self.parent.is_red = True
             self.sibling.is_red = False
 
-            if self.parent.left == self:
+            if self.parent.right == self.sibling:
                 self.parent._rotate_left()
             else:
                 self.parent._rotate_right()
 
             return self._resolve_double_black()
-
-        if self.parent is None:
-            return self
-        
-
-class RBT:
-
-    def __init__(self):
-        self.root = None
-
-
-    def insert(self, value):
-        if self.root == None:
-            self.root = RBT_Node(value)
-            self.root.is_red = False
-        new_root = self.root.insert(value)
-        if new_root != None:
-            self.root = new_root
-
-
-    def delete(self, value):
-        new_root = self.root.delete(value)
-        if new_root != None:
-            self.root = new_root
-
-
-    def find_node(self, value):
-        return self.root.find(value)
-
-
-    def find_max_node(self):
-        return self.root.find_max()
-
-
-    def find_min_node(self):
-        return self.root.find_min()
-
-
-    def traverse(self, key='in'):
-        return self.root.traverse(key)
-
-a = RBT()
-a.insert(7)
-a.insert(3)
-a.insert(18)
-a.insert(10)
-a.insert(22)
-a.insert(8)
-a.insert(11)
-a.insert(26)
-a.insert(2)
-a.insert(6)
-a.insert(13)
-
-
-a.delete(18)
-a.delete(11)
-a.delete(3)
-a.delete(10)
-a.delete(22)
-
-'''
-               10(B)
-            /        \
-          7(*)      18(*)
-          /  \n    /    \
-        3(B) 8(B) 11(B) 22(B)
-        / \n       \n     \
-      2(*) 6(*)     13(*) 26(*)
-                                                
-                
-
-                13(B)
-                /   \
-             7(*)   26(B)
-             /  \
-           6(B) 8(B)
-           /
-         2(*)
-
-'''

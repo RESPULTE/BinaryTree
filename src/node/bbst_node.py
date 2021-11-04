@@ -1,14 +1,14 @@
 from dataclasses import dataclass
-from typing import Union
-from BST import *
+from .bst_node import BST_Node
 
 
 @dataclass
-class BBST(BST):
+class BBST_Node(BST_Node):
 
 
-    def _update(self):
-        raise NotImplementedError
+    def __post_init__(self):
+        if self.__class__ == BBST_Node:
+            raise TypeError("Cannot instantiate abstract class.")
 
 
     def delete(self):
@@ -16,6 +16,21 @@ class BBST(BST):
 
 
     def insert(self):
+        raise NotImplementedError
+        
+
+    def _update(self):
+        raise NotImplementedError
+
+
+    def get_root(self):
+        node = self
+        while node.parent != None:
+            node = node.parent
+        return node
+
+
+    def is_balanced(self) -> None:
         raise NotImplementedError
         
 
@@ -105,3 +120,4 @@ class BBST(BST):
             else:
                 parent_node.right = left_node
             
+

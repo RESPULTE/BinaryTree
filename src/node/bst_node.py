@@ -1,15 +1,11 @@
 from dataclasses import dataclass, field
-from typing import Generic, Any, Optional, TypeVar, List, Union, ClassVar
-from collections import deque
-
-T = TypeVar('T', bound=Any)
-
+from .type_hint import *
 
 @dataclass
-class BST(Generic[T]):
+class BST_Node(Generic[CT]):
 
 
-    value:  Optional[T]      = None
+    value:  Optional[CT]     = None
     parent: Optional['BST']  = field(default=None, repr=False, compare=False)
     left:   Optional['BST']  = field(default=None, repr=False, compare=False)
     right:  Optional['BST']  = field(default=None, repr=False, compare=False)
@@ -35,23 +31,16 @@ class BST(Generic[T]):
         except AttributeError:
             return False
 
-    @classmethod
-    def fill_tree(cls, values: List[T]) -> 'BST':
-        '''generates a binary tree with all the values from a list'''
-        new_bst = cls()
-        for value in values:
-            new_bst.insert(value)
-        return new_bst
 
-
-    def insert(self, value: T) -> None:
+    def insert(self, value: CT) -> None:
         '''insert a value into the binary tree'''
         if self.value is None:  
             self.value = value
+            return 
         self._insert(value)
 
 
-    def _insert(self, value: T) -> None:
+    def _insert(self, value: CT) -> None:
         '''internal function of the binary tree where the recursions happen'''
         if value == self.value: 
             return None
@@ -71,7 +60,7 @@ class BST(Generic[T]):
                 return self.right._insert(value)
 
 
-    def find(self, value: T) -> T:
+    def find(self, value: CT) -> CT:
         '''search for the given value in the binary tree'''
         if self.value == value: 
             return self
@@ -110,73 +99,15 @@ class BST(Generic[T]):
         return self.right.find_max_by_node()    
 
 
-    def traverse(self, key='in') -> List[T]:
-        '''
-        returns a list containing all the items in the binary tree in the given order type
-        in-order  ['in']: from min-to-max
-        pre-order ['pre']: root node as the beginning, from left to right, kinda like DFS
-        post-order ['post']: root node as the end, from left to right
-        level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
-        '''
-        def inorder_traversal(node: 'BST', path: list):
-            if node.left:
-                inorder_traversal(node.left, path)
-            path.append(node.value)
-            if node.right:
-                inorder_traversal(node.right, path)
-            return path
-
-        def postorder_traversal(node: 'BST', path: list):
-            if node.left:
-                postorder_traversal(node.left, path)
-            if node.right:
-                postorder_traversal(node.right, path)
-            path.append(node.value)
-            return path
-
-        def preorder_traversal(node: 'BST', path: list):
-            path.append(node.value)
-            if node.left:
-                preorder_traversal(node.left, path)
-            if node.right:
-                preorder_traversal(node.right, path)
-            return path
-
-        def levelorder_traversal(node: 'BST', path: list):
-            stack = deque([self])
-
-            while stack != deque([]):
-                node = stack.popleft()
-                path.append(node.value)
-
-                if node.left != None: 
-                    stack.append(node.left)
-                if node.right != None: 
-                    stack.append(node.right)
-
-            return path
-
-        traversing_option = {
-        'in': inorder_traversal, 
-        'post': postorder_traversal, 
-        'pre': preorder_traversal,
-        'lvl': levelorder_traversal
-        }
-
-        if key not in traversing_option:
-            raise ValueError(f'{key} given is not a valid option')
-
-        return traversing_option[key](self, [])
-
-
-    def delete(self, value: T) -> None:
+    def delete(self, value: CT) -> None:
         '''remove the given vaue from the binary tree'''
 
-        node = self.find(value)
-        if node == None:
+        node_to_delete = self.find(value)
+        
+        if node_to_delete is None:
             raise ValueError(f'{value} is not in {self.__class__.__name__}')
 
-        node._delete_node()   
+        node_to_delete._delete_node()   
 
 
     def _delete_node(self): 
@@ -198,8 +129,6 @@ class BST(Generic[T]):
                     self.parent.right = None
             else:
                 self.value = None
-                
-            return self
 
         # CASE 2: if the node has a left child and a right child
         # 
@@ -249,10 +178,8 @@ class BST(Generic[T]):
         #   0   2 4   6 
         elif self.left and self.right:
             successor_node = self.right.find_min_by_node()
-
             self.value = successor_node.value 
-
-            return successor_node._delete_node()
+            successor_node._delete_node()
 
         # CASE 3: if the node only have one child
         # 
@@ -276,74 +203,21 @@ class BST(Generic[T]):
 
                 else:
                     self.parent.right = child_node
-                return child_node
+
             else:
-                self.value = child_node.value
-                return child_node._delete_node()
+                self.__dict__ = child_node.__dict__
 
-
-    def __add__(self, other: Union['BST', T]) -> 'BST':
-        if isinstance(other, type(self)):
-            total_val = self.traverse()
-            for val in other:
-                if val not in self:
-                    total_val.append(val)
-            return BST.fill_tree(total_val)
-
-        new_bst = BST.fill_tree(self.traverse())
-        new_bst.insert(other)
-        return new_bst
-
-
-    def __iadd__(self, other: Union['BST', T]) -> 'BST':
-        if isinstance(other, type(self)):
-            for val in other:
-                if val not in self:
-                    self.insert(val)
-            return self
-
-        self.insert(other)
-        return self
-
-
-    def __sub__(self, other: Union['BST', T]) -> 'BST':
-        if isinstance(other, type(self)):
-            total_val = self.traverse()
-            for val in other:
-                if val in self:
-                    total_val.remove(val)
-            return BST.fill_tree(total_val)
-
-        new_bst = BST.fill_tree(self.traverse())
-        new_bst.delete(other)
-        return new_bst
-
-
-    def __isub__(self, other: Union['BST', T]) -> 'BST':
-        if isinstance(other, type(self)):
-            for val in other:
-                if val in self:
-                    self.delete(val)
-            return self
-            
-        self.insert(other)
-        return self
-
-
-    def __iter__(self):
-        return iter((self.traverse()))
-
-
-    def __contains__(self, value: T) -> bool:
-        return True if self.find(value) else False
-
+                if child_node.right != None:
+                    child_node.right.parent = self
+                if child_node.left != None:
+                    child_node.left.parent = self
+                    
+                self.parent = None
 
     def __str__(self):
         return str(self.value)
 
 
-
-
-
-
-
+    def __repr__(self):
+        family_val = ( member.value if member != None else None for member in [self, self.parent, self.left, self.right])
+        return f'self: {next(family_val)} | parent: {next(family_val)} | left: {next(family_val)} | right: {next(family_val)}'
