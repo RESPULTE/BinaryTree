@@ -1,5 +1,5 @@
 from collections import deque
-from node import *
+from .node import *
 
 
 class Tree:
@@ -173,29 +173,10 @@ class Tree:
 
 
 
-class AVL(Tree):
-
-    _node_type = AVL_Node
-
-    def __init__(self):
-        super().__init__()
 
 
-class RBT(Tree):
-
-    _node_type = RBT_Node
-
-    def __init__(self):
-        super().__init__()
 
 
-class BST(Tree):
 
-    _node_type = BST_Node
 
-    def __init__(self):
-        super().__init__()
-        
-'''
-a = RBT.fill_tree([10, 7, 18, 3, 8, 11, 22, 2, 6, 13, 26])
-'''
+
