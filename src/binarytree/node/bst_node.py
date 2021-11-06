@@ -6,26 +6,29 @@ class BST_Node(Generic[CT]):
 
 
     value:  Optional[CT]     = None
-    parent: Optional['BST']  = field(default=None, repr=False, compare=False)
-    left:   Optional['BST']  = field(default=None, repr=False, compare=False)
-    right:  Optional['BST']  = field(default=None, repr=False, compare=False)
+    parent: Optional['BST_Node']  = field(default=None, repr=False, compare=False)
+    left:   Optional['BST_Node']  = field(default=None, repr=False, compare=False)
+    right:  Optional['BST_Node']  = field(default=None, repr=False, compare=False)
 
     @property
-    def grandparent(self):
+    def grandparent(self) -> Union['BST_Node', bool]:
+        '''get the parent of the parent of the node, if any'''
         try:
             return self.parent.parent
         except AttributeError:
             return False
 
     @property
-    def uncle(self):
+    def uncle(self) -> Union['BST_Node', bool]:
+        '''get the uncle of the parent of the node, if any'''
         try:
             return self.grandparent.right if self.parent is self.grandparent.left else self.grandparent.left
         except AttributeError:
             return False
 
     @property
-    def sibling(self):
+    def sibling(self) -> Union['BST_Node', bool]:
+        '''get the sibling of the node, if any'''
         try:
             return self.parent.left if self is self.parent.right else self.parent.right
         except AttributeError:
@@ -71,28 +74,28 @@ class BST_Node(Generic[CT]):
         return None
 
 
-    def find_min(self):
+    def find_min(self) -> 'BST_Node':
         '''find the minimum value relative to a specific node in the binary tree'''
         if self.left is None:
             return self
         return self.left.find_min()     
 
 
-    def find_max(self):
+    def find_max(self) -> 'BST_Node':
         '''find the maximum value relative to a specific node in the binary tree'''
         if self.right is None:
             return self
         return self.right.find_max() 
 
 
-    def find_min_by_node(self):
+    def find_min_by_node(self) -> 'BST_Node':
         '''find the minimum value relative to a specific node in the binary tree'''
         if self.left is None:
             return self
         return self.left.find_min_by_node()     
 
 
-    def find_max_by_node(self):
+    def find_max_by_node(self) -> 'BST_Node':
         '''find the maximum value relative to a specific node in the binary tree'''
         if self.right is None:
             return self
@@ -110,7 +113,7 @@ class BST_Node(Generic[CT]):
         node_to_delete._delete_node()   
 
 
-    def _delete_node(self): 
+    def _delete_node(self) -> None: 
         '''
         recursively going down the chain of nodes until a node with only 1 child or no chi.ld is found
         then, perform necceesarily steps to make the node obselete (set to None)
@@ -214,10 +217,11 @@ class BST_Node(Generic[CT]):
                     
                 self.parent = None
 
+
     def __str__(self):
-        return str(self.value)
+        return str(f'[value: {self.value}]')
 
 
     def __repr__(self):
-        family_val = ( member.value if member != None else None for member in [self, self.parent, self.left, self.right])
+        family_val = (member.value if member != None else None for member in [self, self.parent, self.left, self.right])
         return f'self: {next(family_val)} | parent: {next(family_val)} | left: {next(family_val)} | right: {next(family_val)}'

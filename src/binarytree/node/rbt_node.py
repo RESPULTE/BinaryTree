@@ -5,21 +5,32 @@ from .type_hint  import *
 
 @dataclass
 class RBT_Node(BBST_Node):
+    '''
+    node for the RBT class (Red-Black Tree)
+    - each node is categorized by its color, whether it's black or red
 
+    ALL INVARIANTS:
+
+        i. a red parent cannot have any red child
+        ii. the root must be black
+        iii. every path to every node must contain the same number of black node
+
+
+    - by far the most troublesome one that I've implemented
+
+    - I don't know how the heck anything works in this tree,
+      all the steps to balance it sounds like magical mumbo-jumbo
+
+    - I don't even know if it works properly or not, 
+      it looks like it does, so... that's promising i guess?
+
+    '''
 
     is_red: bool = field(default=True, compare=False)
 
 
-    def get_red_child(self):
-        if self.left != None and self.left.is_red:
-            return self.left
-        elif self.right != None and self.right.is_red:
-            return self.right
-        else:
-            return False
-
-
-    def insert(self, value: CT) -> Union['RBT', None]:
+    def insert(self, value: CT) -> Union['RBT_Node', None]:
+        '''add a node with the given value into the tree'''
         if self.parent is None: 
             self.is_red = False
 
@@ -28,10 +39,14 @@ class RBT_Node(BBST_Node):
         if new_node: 
             # only update the node if a new node has been inserted into the binary tree
             # the '_insert' function will return None if the value already exists in the binary tree
-            return new_node._update_insert() 
-    
+            new_node._update_insert() 
 
-    def _update_insert(self):
+            # only traverse and get the root node if this node (self)  
+            # which is, at the beginning, the root node has been changed
+            if self.parent != None:
+                return self.get_root()
+
+    def _update_insert(self) -> None:
         '''
         _______________________________________________________________________________________________________
          CASE 1: uncle is [BLACK]
@@ -97,37 +112,58 @@ class RBT_Node(BBST_Node):
                     self.is_red = False
                     grandparent_node._rotate_left()  
 
-        if self.parent is None:       
-            self.is_red = False
-            return self
+
+    def get_red_child(self) -> Union['RBT_Node', None]:
+        '''
+        returns a red child, if any, of the specific node
+        - only used in the delete's internal function, '_resolve_double_black'
+
+        '''
+        if self.left != None and self.left.is_red:
+            return self.left
+        elif self.right != None and self.right.is_red:
+            return self.right
+        else:
+            return False
 
 
-    def delete(self, value: CT) -> None:     
+    def delete(self, value: CT) -> 'RBT_Node':     
+        '''remove the node that contains the specified value from the tree'''
         node_to_delete = self.find(value) 
         if node_to_delete == None:
             raise ValueError(f'{value} is not in {self.__class__.__name__}')
 
-        double_black = True if not node_to_delete.get_red_child() else False
+        # check if the node has any red child
+        # if not, the node will become a 'double black node' when deleted
+        # and that will have to be 'rebalanced' in the update function
+        double_black = node_to_delete.get_red_child() is False
 
         node_to_delete._delete_node()
 
-        new_root = node_to_delete._update_delete(double_black)
+        node_to_delete._update_delete(double_black)
 
-        return new_root
+        # only traverse and get the root node if this node (self)  
+        # which is, at the beginning, the root node has been changed
+        if self.parent != None:
+            return self.get_root()
 
 
-    def _update_delete(self, double_black):
-        new_root = None
-
+    def _update_delete(self, double_black: bool) -> None:
+        '''
+        an intermediate function for the potential 
+        need to resolve a 'double black node'
+        '''
+        # if the node that's being deleted is a red node, change it to black and we're done
+        # keep in mind that node isn't actually being deleted, this node that has been 'deleted'
+        # only had its value swapped with a child node or had its relationship cut off with its parent
+        # we don't really care which case it is, just color it black
         if self.is_red:
             self.is_red = False
         elif self.parent != None and double_black:
-            new_root = self._resolve_double_black()
-
-        return new_root
+            self._resolve_double_black()
 
 
-    def _resolve_double_black(self):
+    def _resolve_double_black(self) -> None:
         '''
          P.S: node with a (*) indicator at its side is a red node & [15] is the DB node
 
@@ -137,8 +173,7 @@ class RBT_Node(BBST_Node):
 
          i. color the DB node, DB node's parent and DB node's sibling's child BLACK
         
-         ii. color the DB node's sibling to the color of DB node's parent
-             (does not matter if the said sibling is already BLACK)
+         ii. set the color of DB node's sibling to the color of DB node's parent
         
          iii. perform right/left rotation the DB node's parent 
               (depending on the node's relationship with the parent)
@@ -147,7 +182,7 @@ class RBT_Node(BBST_Node):
 
                    11(B)                7(B)
                   /    \n               /  \n      
-                 7(B) 15(DB)   =>     5(B)  11(B)
+                 7(B) 15(DB)   =>     5(B)  11(B)    => [end recursion]
                 /                            \n         
                5(*)                          15(B)
         
@@ -160,7 +195,7 @@ class RBT_Node(BBST_Node):
          ii. if the parent of DB node is red, color it black
              if the parent of DB node is already black, set it as double black (DB)
               
-         iii. continue the recursion
+         iii. continue/end the recursion depending on whether the double black has been resolved
 
          consider the following examples:
 
@@ -205,14 +240,13 @@ class RBT_Node(BBST_Node):
                     self.parent._rotate_left()
                 else:
                     self.parent._rotate_right()
-                return self.get_root()
 
             else:
                 self.sibling.is_red = True
                 if self.parent.is_red:
                     self.parent.is_red = False
                 elif self.grandparent != None:
-                    return self.parent._resolve_double_black()
+                    self.parent._resolve_double_black()
         else:
             self.parent.is_red = True
             self.sibling.is_red = False
@@ -222,4 +256,8 @@ class RBT_Node(BBST_Node):
             else:
                 self.parent._rotate_right()
 
-            return self._resolve_double_black()
+            self._resolve_double_black()
+
+
+    def __str__(self):
+        return str(f"[value: {self.value}, color: {'red' if self.is_red else 'black'}]")

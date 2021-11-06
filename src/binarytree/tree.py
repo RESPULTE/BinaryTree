@@ -2,14 +2,78 @@ from collections import deque
 from .node import *
 
 
-class Tree:
+class Tree(Generic[CT]):
+    '''
+    '''
+    _node_type = None
 
     def __init__(self):
         self.root = None
 
+        if self._node_type is None:
+            raise TypeError("Cannot instantiate abstract class.")
+
+
+    @property
+    def height(self) -> int:
+        '''recursively get the height of the tree '''
+        def traversal_counter(node) -> int:
+            if node is None:
+                return -1
+            return 1 + max(traversal_counter(node.left), traversal_counter(node.right))
+
+        return traversal_counter(self.root) 
+
+
+    @property
+    def is_balanced(self) -> bool:
+        '''
+        check whether the tree is balanced, i.e both side of the tree, 
+        left & right have similar/same number of nodes
+        -> the difference in number of nodes for both side 
+           of every node does not exceed 1
+
+        STEPS:
+
+            1. go down until the leftmost & rightmost node has been reached
+            2. start checking whether each node is balanced
+            3. return their height along with whether they're balanced or not 
+            4. unfold the recursion to the previous node
+            5. rinse & repeat until the recursion unfolds back to the starting node/root node
+
+            * so, if any one of the node, starting from the leaf nodes, is unbalanced
+              it will cause will the other nodes 'above' him to be unbalanced as well
+              due to all to them depending on the last node's balance_value(boolean)
+            
+            * basically, only 2 value is passed around, 
+              the balance_value & the height of the node
+              - the balance_value is required for the said chain reaction
+              - while the node's height is required for the checking
+        '''
+        def traversal_check(node) -> Tuple[bool, int]:
+            # keep going down the chain of nodes 
+            # until the leftmost/rightmost node has been reached
+            # then, return True, as leaf nodes has no child nodes and are inherently balanced
+            # + the height of the leaf node, which is -1 since again, it has no child 
+            if node is None: return (True, -1)
+
+            left_height  = traversal_check(node.left)
+            right_height = traversal_check(node.right)
+            
+            # check whether the left & right node is balanced
+            # and whether the height the node is balanced
+            balanced = (left_height[0] and right_height[0] and
+                        abs(left_height[1] - right_height[1]) <= 1)
+
+            # return the 'balanced' variable and the height of the current node
+            # to be used for the previous node
+            return (balanced, 1 + max(left_height[1], right_height[1]))
+
+        return traversal_check(self.root)[0]
+
 
     @classmethod
-    def fill_tree(cls, values) -> 'BST':
+    def fill_tree(cls, values: List[CT]) -> 'Tree':
         '''generates a binary tree with all the values from a list'''
         new_bst = cls()
         for value in values:
@@ -17,7 +81,8 @@ class Tree:
         return new_bst
 
 
-    def insert(self, value):
+    def insert(self, value: CT) -> None:
+        '''add a node with the given value into the tree'''
         if self.root == None:
             self.root = self._node_type(value)
             return
@@ -26,13 +91,14 @@ class Tree:
             self.root = new_root
 
 
-    def delete(self, value):
+    def delete(self, value: CT) -> None:
+        '''remove the node that contains the specified value from the tree'''
         new_root = self.root.delete(value)
         if new_root != None:
             self.root = new_root
 
 
-    def traverse(self, key='in'):
+    def traverse(self, key:str='in', value:bool=True) -> List['node']:
         '''
         returns a list containing all the items in the binary tree in the given order type
         in-order  ['in']: from min-to-max
@@ -40,36 +106,36 @@ class Tree:
         post-order ['post']: root node as the end, from left to right
         level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
         '''
-        def inorder_traversal(node: 'BST', path: list):
+        def inorder_traversal(node: 'BST', path: list) -> List['node']:
             if node.left:
                 inorder_traversal(node.left, path)
-            path.append(node.value)
+            path.append(node)
             if node.right:
                 inorder_traversal(node.right, path)
             return path
 
-        def postorder_traversal(node: 'BST', path: list):
+        def postorder_traversal(node: 'BST', path: list) -> List['node']:
             if node.left:
                 postorder_traversal(node.left, path)
             if node.right:
                 postorder_traversal(node.right, path)
-            path.append(node.value)
+            path.append(node)
             return path
 
-        def preorder_traversal(node: 'BST', path: list):
-            path.append(node.value)
+        def preorder_traversal(node: 'BST', path: list) -> List['node']:
+            path.append(node)
             if node.left:
                 preorder_traversal(node.left, path)
             if node.right:
                 preorder_traversal(node.right, path)
             return path
 
-        def levelorder_traversal(node: 'BST', path: list):
-            stack = deque([self.root])
+        def levelorder_traversal(node: 'BST', path: list) -> List['node']:
+            stack = deque([node])
 
             while stack != deque([]):
                 node = stack.popleft()
-                path.append(node.value)
+                path.append(node)
 
                 if node.left != None: 
                     stack.append(node.left)
@@ -88,27 +154,46 @@ class Tree:
         if key not in traversing_option:
             raise ValueError(f'{key} given is not a valid option')
 
-        return traversing_option[key](self.root, [])
+        if self.root is None: return None
+
+        all_nodes = traversing_option[key](self.root, [])
+
+        if not value:
+            return all_nodes
+
+        return [node.value for node in all_nodes]
 
 
-    def find_node(self, value):
+    def find_node(self, value: CT) -> 'Node':
+        '''
+        get the node with the given value, 
+        will raise an error if it doesnt belong in the tree
+        '''
         return self.root.find(value)
 
 
-    def find_max_node(self):
+    def find_closest_node(self, value: CT) -> 'Node':
+        '''find the node with the closest value to the given value'''
+        all_nodes = self.traverse(value=False)
+        return min(all_nodes, key=lambda node: abs(value - node.value))
+
+
+    def find_max_node(self) -> 'Node':
+        '''get the node with the maximum value in the tree'''
         return self.root.find_max()
 
 
-    def find_min_node(self):
+    def find_min_node(self) -> 'Node':
+        '''get the node with the minimum value in the tree'''
         return self.root.find_min()
 
 
-    def __add__(self, other) -> 'BST':
+    def __add__(self, other: Union[CT, 'Tree']) -> 'Tree':
+        '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            total_val = self.traverse()
-            for val in other:
-                if val not in self:
-                    total_val.append(val)
+            self_vals = self.traverse()
+            other_vals = other.traverse()
+            total_val = [val for val in self_vals if val not in other_vals] + self_vals
             return self.fill_tree(total_val)
 
         try:
@@ -117,10 +202,13 @@ class Tree:
             raise ValueError(f'cannot insert value of type "{other.__class__.__name__}" into "{self.__class__.__name__}" with value of type "{self.root.value.__class__.__name__}"')
 
 
-    def __iadd__(self, other) -> 'BST':
+    def __iadd__(self, other: Union[CT, 'Tree']) -> 'Tree':
+        '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            for val in other:
-                if val not in self:
+            self_vals = self.traverse()
+            other_vals = other.traverse()
+            for val in other_vals:
+                if val not in self_vals:
                     self.insert(val)
             return self
 
@@ -131,13 +219,18 @@ class Tree:
             raise ValueError(f'cannot insert value of type "{other.__class__.__name__}" into "{self.__class__.__name__} "with value of type "{self.root.value.__class__.__name__}"')
 
 
-    def __sub__(self, other) -> 'BST':
+    def __sub__(self, other: Union[CT, 'Tree']) -> 'Tree':
+        '''
+        subtract this tree by another tree
+        - only common values within both trees will be removed 
+        '''
         if isinstance(other, type(self)):
-            total_val = self.traverse()
-            for val in other:
-                if val in self:
-                    total_val.remove(val)
-            return self.fill_tree(total_val)
+            self_vals = self.traverse()
+            other_vals = other.traverse()
+            for val in other_vals:
+                if val in self_vals:
+                    self_vals.remove(val)
+            return self.fill_tree(self_vals)
 
         try:
             return self.fill_tree(self.traverse()).delete(other)
@@ -146,10 +239,16 @@ class Tree:
 
 
 
-    def __isub__(self, other) -> 'BST':
+    def __isub__(self, other: Union[CT, 'Tree']) -> 'Tree':
+        '''
+        subtract this tree by another tree
+        - only common values within both trees will be removed 
+        '''
         if isinstance(other, type(self)):
-            for val in other:
-                if val in self:
+            self_vals = self.traverse()
+            other_vals = other.traverse()
+            for val in other_vals:
+                if val in self_vals:
                     self.delete(val)
             return self
         
@@ -164,7 +263,7 @@ class Tree:
         return iter((self.traverse()))
 
 
-    def __contains__(self, value) -> bool:
+    def __contains__(self, value: CT) -> bool:
         return True if self.root.find(value) else False
 
 

@@ -1,12 +1,25 @@
 from dataclasses import dataclass, field
-
 from .bbst_node import BBST_Node
 from .type_hint import *
 
 
 @dataclass
 class AVL_Node(BBST_Node):
+    '''
+    The node class for the AVL tree
 
+    ALL INVARIANTS:
+
+        i. the height of every node must not exceed 1 / -1
+            - exceeding (1) -> right-skewed
+            - exceeding (-1)-> left-skewed
+
+        ii. node without any child node will be considered to have a height of -1
+
+
+    P.S the value for the invariants can be changed depending on how its implemented
+
+    '''
 
     height: int   = field(default=0, compare=False)
     b_factor: int = field(default=0, compare=False)
@@ -18,13 +31,15 @@ class AVL_Node(BBST_Node):
         if self.b_factor > 1 or self.b_factor < -1: 
             self._rebalance()  
 
+        # keep going until the root node is reached
+        # then, just return the node for caching in the <Tree> class
         if self.parent != None: 
             return self.parent._update()
 
         return self
 
 
-    def insert(self, value: CT) -> Union['BBST', None]:
+    def insert(self, value: CT) -> Union['AVL_Node', None]:
         new_node = self._insert(value)
         if new_node: 
             # only update the node if a new node has been inserted into the binary tree
@@ -33,95 +48,47 @@ class AVL_Node(BBST_Node):
 
 
     def delete(self, value: CT) -> None: 
-        new_root = None 
-
+        # find the node to be deleted in the tree
+        # if its not in the tree, the 'find' function will raise an error about it
         node_to_delete = self.find(value) 
 
         node_to_delete._delete_node()
 
+        # using the parent of the node that has been 'deleted' to do the update
+        # because the node isn't actually deleted, it either 
+        # - had its relationship with its parent cut off -> can't be accessed
+        # - had its value overwritten by a child node
         new_root = node_to_delete._update()
 
         return new_root
 
 
     def _rebalance(self) -> None:
-        '''performs neccessary rotations based on the balancing factor of the node'''
+        '''
+        performs neccessary rotations based on the balancing factor of the node
+        
+        '''
+        # the node is skewed to the left / 'left heavy'
         if self.b_factor == -2:
+
+            # LEFT-LEFT CASE
             if self.left.b_factor <= 0:
-                # left-left case
-                # a straight line in formed with 
-                # the node, node's left_child & node's left_grandchild
-                #
-                #        X(node)
-                #       /
-                #      Y (node's grandchild)
-                #     /
-                #    Z (node's child)
-                #
                 self._rotate_right()
+
+            # LEFT-RIGHT CASE
             else:
-                # left-right case
-                # a corner/v-shape to the left in formed with 
-                # the node, node's left_child & node's left_grandchild
-                #
-                #    X(node)
-                #   /
-                #  Y (node's child)
-                #   \
-                #    Z (node's grandchild)
-                #
-                # gotta rotate the node's left_child first so that
-                # a line between those 3 nodes can be formed
-                # since the node's grandchild is'larger' than node's child
-                # the rotation will not affect the invariants of a Binary Search Tree
-                # i.e the rules of BST
-                #
-                #        X(node)
-                #       /
-                #      Y (node's grandchild)
-                #     /
-                #    Z (node's child)
-                #
-                # P.S: The node's parent is ommitted here to avoid over-complicating everything
                 self.left._rotate_left()
                 self._rotate_right()
 
+        # the node is skewed to the right / 'right heavy'
         if self.b_factor == +2:
+
+            # RIGHT-RIGHT CASE
             if self.right.b_factor >= 0:
-                # right-right case
-                # a straight line in formed with 
-                # the node, node's right_child & node's right_grandchild
-                #
-                #  X(node)
-                #   \
-                #    Y (node's grandchild)
-                #     \
-                #      Z (node's child)
-                #
                 self._rotate_left()
+
+            # RIGHT-LEFT CASE
             else:
-                # right-left case
-                # a corner/v-shape to the right in formed with 
-                # the node, node's left_child & node's left_grandchild
-                #    X(node)
-                #     \
-                #      Y (node's child)
-                #     /
-                #    Z (node's grandchild)
-                #
-                # gotta rotate the node's left_child first so that
-                # a line between those 3 nodes can be formed
-                # since the node's grandchild is 'smaller' than node's child
-                # the rotation will not affect the invariants of a Binary Search Tree
-                # i.e the rules of BST
-                #
-                #  X(node)
-                #   \
-                #    Y (node's grandchild)
-                #     \
-                #      Z (node's child)
-                #
-                # P.S: The node's parent is ommitted here to avoid over-complicating everything
                 self.right._rotate_right()
                 self._rotate_left()
 
@@ -151,6 +118,7 @@ class AVL_Node(BBST_Node):
         self.b_factor = right_height - left_height
 
 
-
+    def __str__(self):
+        return str(f'[value: {self.value}, height: {self.height}, b_factor: {self.b_factor}]')
 
 
