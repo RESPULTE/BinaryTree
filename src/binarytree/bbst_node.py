@@ -36,8 +36,10 @@ class RBT_Node(BST_Node):
 
         '''
         red_children = []
-        if self.left != None and self.left.is_red: red_children.append(self.left)
-        if self.right != None and self.right.is_red: red_children.append(self.right)
+        if self.left != None and self.left.is_red: 
+            red_children.append(self.left)
+        if self.right != None and self.right.is_red: 
+            red_children.append(self.right)
         return red_children
 
 
@@ -130,6 +132,7 @@ class RBT_Node(BST_Node):
     def delete(self, value: CT) -> 'RBT_Node':     
         '''remove the node that contains the specified value from the tree'''
         node_to_delete = self.find(value) 
+
         if node_to_delete == None:
             raise ValueError(f'{value} is not in {self.__class__.__name__}')
 
@@ -138,7 +141,7 @@ class RBT_Node(BST_Node):
         # check if the node has any red child
         # if not, the node will become a 'double black node' when deleted
         # and that will have to be 'rebalanced' in the update function
-        double_black = not deleted_node.is_red and not node_to_delete.is_red
+        double_black = deleted_node.get_red_child() == []
 
         deleted_node._update_delete(double_black)
 

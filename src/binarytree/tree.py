@@ -27,6 +27,39 @@ class RBT(Tree):
         super().__init__()
 
 
+    @property
+    def isredblack(self) -> bool:
+
+        def traversal_check(node) -> Tuple[bool, int]:
+            # keep going down the chain of nodes 
+            # until the leftmost/rightmost node has been reached
+            # then, return True, as leaf nodes has no child nodes and are inherently colour-balanced
+            # and the 'black_height' of the node, which can be anything really, as it doesnt affect the overall result
+            if node is None: return (True, 0) 
+
+            left_check  = traversal_check(node.left)
+            right_check = traversal_check(node.right)
+
+            # check whether the left & right node is colour-balanced 
+            # i.e the number of black nodes in the left subtree is the same as the right sub-tree
+            colour_check = (left_check[1] == right_check[1]) and (left_check[0] and right_check[0])
+
+            # check whether the nodes obey the red-black invariants 
+            # i.e a red child cannot have a red parent
+            if node.parent != None and node.parent.is_red and node.is_red: colour_check = False
+
+            # get the max height among left and right black heights
+            # to get the 'problematic' subtree since both should be the same if things are done properly
+            total_black_nodes = max(right_check[1], left_check[1])
+            #print(node.value, left_check, right_check)
+            # add 1 if the current node that;s being looked at is black
+            if not node.is_red: total_black_nodes += 1
+
+            return (colour_check, total_black_nodes)
+
+        return traversal_check(self.root)[0]
+
+
 class BST(Tree):
     '''
     - a type of tree that stores values in nodes, based on the values
