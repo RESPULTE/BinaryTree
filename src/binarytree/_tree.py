@@ -1,3 +1,4 @@
+from types import MethodType
 from ._type_hint import *
 
 
@@ -253,15 +254,22 @@ class Tree(Generic[CT]):
     def __add__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
+            if other.root == None or self.root == None: 
+                if other.root != None:
+                    return type(self).fill_tree(other.traverse())
+                elif self.root != None:
+                    return type(self).fill_tree(self.traverse())
+                else:
+                    return type(self)()
             if self.dtype != other.dtype:
                 raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
             other_vals = other.traverse()
             total_vals = [val for val in other_vals if val not in self_vals] + self_vals
-            return self.fill_tree(total_vals)
+            return type(self).fill_tree(total_vals)
 
         try:
-            return self.fill_tree(self.traverse()).insert(other)
+            return type(self).fill_tree(self.traverse()).insert(other)
         except TypeError:
             raise TypeError(f"cannot insert value of type '{other.__class__.__name__}' into '{self.__class__.__name__}({self.dtype.__name__})'")
 
@@ -269,6 +277,13 @@ class Tree(Generic[CT]):
     def __iadd__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
+            if other.root == None or self.root == None: 
+                if self.root != None:
+                    return self
+                else:
+                    for node in other:
+                        self.insert(node.value)
+                    return self
             if self.dtype != other.dtype:
                 raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
@@ -291,18 +306,22 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
+            if other.root == None or self.root == None: 
+                if self.root != None:
+                    return type(self).fill_tree(self.traverse())
+                else:
+                    return type(self)()
             if self.dtype != other.dtype:
                 raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
             other_vals = other.traverse()
             total_vals = [val for val in self_vals if val not in other_vals]
-            return self.fill_tree(total_vals)
+            return type(self).fill_tree(total_vals)
 
         try:
-            return self.fill_tree(self.traverse()).delete(other)
+            return type(self).fill_tree(self.traverse()).delete(other)
         except TypeError:
             raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.dtype.__name__})'")
-
 
 
     def __isub__(self, other: Union[CT, 'Tree']) -> 'Tree':
@@ -311,6 +330,7 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
+            if other.root == None or self.root == None: return self
             if self.dtype != other.dtype:
                 raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
@@ -327,6 +347,20 @@ class Tree(Generic[CT]):
             raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.dtype.__name__})'")
 
 
+    def __getattribute__(self, attr_name):
+        attr = super().__getattribute__(attr_name)
+
+        if isinstance(attr, MethodType) and attr_name != 'insert':
+            def root_checker(*args, **kwargs):
+                if self.root == None:
+                    return f'{type(self).__name__}(empty)'
+                result = attr(*args, **kwargs)
+                return result
+            return root_checker
+        else:
+            return attr
+
+
     def __getitem__(self, key):
         return self.root.find(key)
 
@@ -334,6 +368,10 @@ class Tree(Generic[CT]):
     def __setitem__(self, key, value):
         self.delete(key)
         self.insert(value)
+
+
+    def __delitem__(self, key):
+        self.delete(key)
 
 
     def __len__(self):
