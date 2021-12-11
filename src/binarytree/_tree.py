@@ -38,7 +38,88 @@ class Tree(Generic[CT]):
 
 
     @property
-    def is_balanced(self) -> bool:
+    def iscomplete(self) -> bool:
+        '''
+        check whether the tree is complete,
+        -> i.e all nodes of the tree either has 2 child or no child
+        '''
+        def traversal_check(node) -> bool:
+            # keep going down the chain of nodes 
+            # until the leftmost/rightmost node has been reached
+            # then, return True, as leaf nodes has no child nodes 
+            if node is None: return True
+
+            left_check  = traversal_check(node.left)
+            right_check = traversal_check(node.right)
+            
+            # check whether the node is 'complete'
+            # i.e: whether is has both child or no child
+            completeness_check = (node.left != None and node.right != None) or \
+                                 (node.left == None and node.right == None)
+
+            return left_check and right_check and completeness_check
+
+        return traversal_check(self.root)        
+
+
+    @property
+    def isperfect(self) -> bool:
+        '''
+        check whether the tree is perfect
+        -> i.e each branch of the tree has the same height
+        '''
+        def traversal_check(node) -> Tuple[bool, int]:
+            # keep going down the chain of nodes 
+            # until the leftmost/rightmost node has been reached
+            # then, return True, as leaf nodes has no child nodes and are inherently balanced
+            if node is None: return (True, -1)
+
+            left_height  = traversal_check(node.left)
+            right_height = traversal_check(node.right)
+            
+            # check whether the left & right node is perfect
+            # and whether the height the node is perfect
+            perfectness_check = (left_height[0] and right_height[0] and abs(left_height[1] - right_height[1]) == 0)
+
+            # return the 'perfectness_check' variable and the height of the current node
+            return (perfectness_check, 1 + max(left_height[1], right_height[1]))
+
+        return traversal_check(self.root)[0]    
+
+
+    @property
+    def isbinary(self) -> bool:
+        '''
+        check whether the tree obeys the binary search tree's invariant
+        i.e:
+        - left node's value < node's value 
+        - right node's value > node's value
+        '''
+        def traversal_check(node) -> bool:
+            # keep going down the chain of nodes 
+            # until the leftmost/rightmost node has been reached
+            # then, return True, as leaf nodes has no child nodes 
+            if node is None: return True
+
+            left_check  = traversal_check(node.left)
+            right_check = traversal_check(node.right)
+            
+            # check whether the left & right node obey the BST invariant
+            check_binary = left_check and right_check
+
+            # then, check the node itself, whether it obeys the BST invariant
+            if node.left != None and node.left > node: 
+                check_binary = False
+            if node.right != None and node.right < node: 
+                check_binary = False
+
+            return check_binary
+
+        return traversal_check(self.root)
+
+
+    @property
+    def isbalanced(self) -> bool:
         '''
         check whether the tree is balanced, i.e both side of the tree, 
         left & right have similar/same number of nodes
@@ -74,11 +155,9 @@ class Tree(Generic[CT]):
             
             # check whether the left & right node is balanced
             # and whether the height the node is balanced
-            balanced = (left_height[0] and right_height[0] and
-                        abs(left_height[1] - right_height[1]) <= 1)
+            balanced = (left_height[0] and right_height[0] and abs(left_height[1] - right_height[1]) <= 1)
 
             # return the 'balanced' variable and the height of the current node
-            # to be used for the previous node
             return (balanced, 1 + max(left_height[1], right_height[1]))
 
         return traversal_check(self.root)[0]
