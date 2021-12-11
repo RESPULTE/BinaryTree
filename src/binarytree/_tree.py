@@ -1,11 +1,11 @@
-from collections import deque
-from binarytree._type_hint import *
+from ._type_hint import *
 
 
 class Tree(Generic[CT]):
     '''
-    This is the base class for all binary search tree 
-    and thus shouldn't be instantiated on its own
+    - This is the base class for all binary search tree 
+    - it acts as an interface for the node classes
+      and shouldn't be instantiated on its own
     
     all binary search tree variations should inherit this class 
     to obtain all the necessary interface functions
@@ -21,7 +21,7 @@ class Tree(Generic[CT]):
 
 
     @property
-    def data_type(self):
+    def dtype(self):
         return type(self.root.value)
     
 
@@ -117,62 +117,7 @@ class Tree(Generic[CT]):
         post-order ['post']: root node as the end, from left to right
         level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
         '''
-        def inorder_traversal(node: Node, path: list) -> List[Node]:
-            if node.left:
-                inorder_traversal(node.left, path)
-            path.append(node)
-            if node.right:
-                inorder_traversal(node.right, path)
-            return path
-
-        def postorder_traversal(node: Node, path: list) -> List[Node]:
-            if node.left:
-                postorder_traversal(node.left, path)
-            if node.right:
-                postorder_traversal(node.right, path)
-            path.append(node)
-            return path
-
-        def preorder_traversal(node: Node, path: list) -> List[Node]:
-            path.append(node)
-            if node.left:
-                preorder_traversal(node.left, path)
-            if node.right:
-                preorder_traversal(node.right, path)
-            return path
-
-        def levelorder_traversal(node: Node, path: list) -> List[Node]:
-            stack = deque([node])
-
-            while stack != deque([]):
-                node = stack.popleft()
-                path.append(node)
-
-                if node.left != None: 
-                    stack.append(node.left)
-                if node.right != None: 
-                    stack.append(node.right)
-
-            return path
-
-        traversing_option = {
-        'in': inorder_traversal, 
-        'post': postorder_traversal, 
-        'pre': preorder_traversal,
-        'lvl': levelorder_traversal
-        }
-
-        if key not in traversing_option:
-            raise ValueError(f'{key} given is not a valid option')
-
-        if self.root is None: return None
-
-        all_nodes = traversing_option[key](self.root, [])
-
-        if not value:
-            return all_nodes
-
-        return [node.value for node in all_nodes]
+        return self.root.traverse(key, value)
 
 
     def find_node(self, value: CT) -> Node:
@@ -185,8 +130,7 @@ class Tree(Generic[CT]):
 
     def find_closest_node(self, value: CT) -> Node:
         '''find the node with the closest value to the given value'''
-        all_nodes = self.traverse(value=False)
-        return min(all_nodes, key=lambda node: abs(value - node.value))
+        return self.root.find_closest(value)
 
 
     def find_max_node(self) -> Node:
@@ -202,8 +146,8 @@ class Tree(Generic[CT]):
     def __add__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            if self.data_type != other.data_type:
-                raise TypeError(f"cannot add '{type(self).__name__}({self.data_type.__name__})' with '{type(other).__name__}({other.data_type.__name__})'")
+            if self.dtype != other.dtype:
+                raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
             other_vals = other.traverse()
             total_vals = [val for val in other_vals if val not in self_vals] + self_vals
@@ -212,14 +156,14 @@ class Tree(Generic[CT]):
         try:
             return self.fill_tree(self.traverse()).insert(other)
         except TypeError:
-            raise TypeError(f"cannot insert value of type '{other.__class__.__name__}' into '{self.__class__.__name__}({self.data_type.__name__})'")
+            raise TypeError(f"cannot insert value of type '{other.__class__.__name__}' into '{self.__class__.__name__}({self.dtype.__name__})'")
 
 
     def __iadd__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            if self.data_type != other.data_type:
-                raise TypeError(f"cannot add '{type(self).__name__}({self.data_type.__name__})' with '{type(other).__name__}({other.data_type.__name__})'")
+            if self.dtype != other.dtype:
+                raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
             other_vals = other.traverse()
             for val in other_vals:
@@ -231,7 +175,7 @@ class Tree(Generic[CT]):
             self.insert(other)
             return self
         except TypeError:
-            raise TypeError(f"cannot insert value of type '{other.__class__.__name__}' into '{self.__class__.__name__}({self.data_type.__name__})'")
+            raise TypeError(f"cannot insert value of type '{other.__class__.__name__}' into '{self.__class__.__name__}({self.dtype.__name__})'")
 
 
     def __sub__(self, other: Union[CT, 'Tree']) -> 'Tree':
@@ -240,8 +184,8 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
-            if self.data_type != other.data_type:
-                raise TypeError(f"cannot subtract {type(self).__name__}('{self.data_type.__name__}') from '{type(other).__name__}({other.data_type.__name__})'")
+            if self.dtype != other.dtype:
+                raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
             other_vals = other.traverse()
             total_vals = [val for val in self_vals if val not in other_vals]
@@ -250,7 +194,7 @@ class Tree(Generic[CT]):
         try:
             return self.fill_tree(self.traverse()).delete(other)
         except TypeError:
-            raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.data_type.__name__})'")
+            raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.dtype.__name__})'")
 
 
 
@@ -260,8 +204,8 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
-            if self.data_type != other.data_type:
-                raise TypeError(f"cannot subtract {type(self).__name__}('{self.data_type.__name__}') from '{type(other).__name__}({other.data_type.__name__})'")
+            if self.dtype != other.dtype:
+                raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
             self_vals = self.traverse()
             other_vals = other.traverse()
             for val in other_vals:
@@ -273,7 +217,7 @@ class Tree(Generic[CT]):
             self.insert(other)
             return self
         except TypeError:
-            raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.data_type.__name__})'")
+            raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.dtype.__name__})'")
 
 
     def __iter__(self):
@@ -281,18 +225,8 @@ class Tree(Generic[CT]):
 
 
     def __contains__(self, value: CT) -> bool:
-        return True if self.root.find(value) else False
+        return self.root.find(value) != None
 
 
     def __str__(self):
         return str(self.traverse())
-
-
-
-
-
-
-
-
-
-

@@ -1,33 +1,32 @@
-from typing import Any, TypeVar, Union, Optional, List, Generic, Tuple, Protocol
+from typing import Any, TypeVar, Union, Optional, List, Generic, Tuple
 from abc import ABCMeta, abstractmethod
 
 
-class Comparable(metaclass=ABCMeta):
+class ComparableType(metaclass=ABCMeta):
 
     @abstractmethod
     def __lt__(self, other: Any) -> bool: ...
 
-
     @abstractmethod
     def __le__(self, other: Any) -> bool: ...
 
-
     @abstractmethod
     def __gt__(self, other: Any) -> bool: ...
-
 
     @abstractmethod
     def __ge__(self, other: Any) -> bool: ...
 
 
-CT = TypeVar('CT', bound=Comparable)
+CT = TypeVar('CT', bound=ComparableType)
 
 
-class Node(Protocol):
+class BinarySearchNode(metaclass=ABCMeta):
 
-    def _insert(self, value: CT) -> None: ...
+    @abstractmethod
+    def insert(self, value: CT) -> 'BinarySearchNode': ...
 
-    def _delete(self, value: CT) -> None: ...
+    @abstractmethod
+    def delete(self, value: CT) -> 'BinarySearchNode': ...
 
-    
 
+Node = TypeVar('Node', bound=BinarySearchNode)

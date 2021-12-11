@@ -1,5 +1,9 @@
-from binarytree._node  import RBT_Node, AVL_Node, BST_Node
-from binarytree._tree import Tree
+from .bbst_node import *
+from .bst_node import *
+from ._tree import *
+
+
+__all__ = ['RBT', 'BST', 'AVL', 'Splay']
 
 
 class RBT(Tree):
@@ -60,3 +64,46 @@ class AVL(Tree):
 
     def __init__(self):
         super().__init__()
+
+
+class Splay(Tree):
+    '''
+    - a type of self-adjusting Binary Search Tree 
+      that depends on the number of search of an item
+    
+    - Pros:
+      * faster traversal of the tree for items that's used frequently
+    - Cons:
+      * not balanced :/
+    
+    '''
+
+    _node_type = Splay_Node
+
+    def __init__(self):
+        super().__init__()
+
+
+    def __getattribute__(self, attr_name):
+        '''
+        reroute all attribute access to here an check if any 'find' method is being called
+        if so, splay the intended node up to the root with the '_update' method
+        -> if the node that is search is invalid, 
+            get the closest node available in the tree and splay that node
+        '''
+        attribute = super(Splay, self).__getattribute__(attr_name)
+        
+        if not ('find' in attr_name and callable(attribute)):
+            return attribute
+
+        def node_splayer(*args, **kwargs):
+            found_node = attribute(*args, **kwargs)
+
+            if not found_node: 
+                self.find_closest_node(*args, **kwargs)
+                return None
+                
+            self.root = found_node._update()    
+            return found_node
+
+        return node_splayer
