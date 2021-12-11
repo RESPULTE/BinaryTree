@@ -189,7 +189,7 @@ class Tree(Generic[CT]):
             self.root = new_root
 
 
-    def traverse(self, key: str='in', value: bool=True) -> List[Node]:
+    def traverse(self, key: str='in', node: bool=False) -> List[Union[Node, CT]]:
         '''
         returns a list containing all the items in the binary tree in the given order type
         in-order  ['in']: from min-to-max
@@ -197,31 +197,58 @@ class Tree(Generic[CT]):
         post-order ['post']: root node as the end, from left to right
         level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
         '''
-        return self.root.traverse(key, value)
+        return self.root.traverse(key, node)
 
 
-    def find_node(self, value: CT) -> Node:
-        '''
-        get the node with the given value, 
-        will raise an error if it doesnt belong in the tree
-        '''
-        return self.root.find(value)
+    def find(self, value: CT, node: bool=False) -> Union[Node, CT]:
+        '''get the node with the given value'''
+        found_node = self.root.find(value)
+        return found_node.value if not node else found_node
 
 
-    def find_closest_node(self, value: CT) -> Node:
-        '''find the node with the closest value to the given value'''
-        return self.root.find_closest(value)
+    def find_lt(self, value: CT, node: bool=False) -> Union[Node, CT]:
+        '''find the node with the closest value that is less than given value'''
+        found_node = self.root.find_lt(value)
+        return found_node.value if not node else found_node
 
 
-    def find_max_node(self) -> Node:
+    def find_gt(self, value: CT, node: bool=False) -> Union[Node, CT]:
+        '''find the node with the closest value that is greater the given value'''
+        found_node = self.root.find_gt(value)
+        return found_node.value if not node else found_node
+
+
+    def find_max(self, node: bool=False) -> Union[Node, CT]:
         '''get the node with the maximum value in the tree'''
-        return self.root.find_max()
+        found_node = self.root.find_max()
+        return found_node.value if not node else found_node
 
 
-    def find_min_node(self) -> Node:
+    def find_min(self, node: bool=False) -> Union[Node, CT]:
         '''get the node with the minimum value in the tree'''
-        return self.root.find_min()
+        found_node = self.root.find_min()
+        return found_node.value if not node else found_node
 
+
+    def pop(self, value: CT=None, key: str='val') -> CT:
+        '''get and delete the given value from the tree'''
+        popping_options = {
+        'val': self.find,
+        'min': self.find_min,
+        'max': self.find_max
+        }
+
+        if key not in popping_options:
+            raise ValueError(f'{key} given is not a valid option')
+
+        if (key != 'val' and value != None) or (key == 'val' and value == None):
+            raise ValueError(f'only one of the arguements can be given')
+
+        found_val = popping_options[key](value) if key == 'val' else popping_options[key]()
+
+        self.delete(found_val)
+
+        return found_val
 
     def __add__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
@@ -300,12 +327,21 @@ class Tree(Generic[CT]):
             raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.dtype.__name__})'")
 
 
+    def __getitem__(self, key):
+        return self.root.find(key)
+
+
+    def __setitem__(self, key, value):
+        self.delete(key)
+        self.insert(value)
+
+
     def __len__(self):
         return len(self.traverse())
 
 
     def __iter__(self):
-        return iter((self.traverse()))
+        return iter((self.traverse(node=True)))
 
 
     def __contains__(self, value: CT) -> bool:

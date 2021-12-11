@@ -28,6 +28,12 @@ class BST_Node(Generic[CT]):
     def uncle(self) -> Union['BST_Node', bool]:
         '''get the uncle of the parent of the node, if any'''
         try:
+            # in case the node calling this has been deleted
+            if self.grandparent.left == None: 
+                return self.grandparent.right
+            elif self.grandparent.right == None: 
+                return self.grandparent.left
+
             return self.grandparent.right if self.parent is self.grandparent.left else self.grandparent.left
         except AttributeError:
             return None
@@ -37,14 +43,18 @@ class BST_Node(Generic[CT]):
     def sibling(self) -> Union['BST_Node', bool]:
         '''get the sibling of the node, if any'''
         try:
-            if self.parent.left == None: return self.parent.right
-            if self.parent.right == None: return self.parent.left
+            # in case the node calling this has been deleted
+            if self.parent.left == None: 
+                return self.parent.right
+            elif self.parent.right == None: 
+                return self.parent.left
+
             return self.parent.left if self is self.parent.right else self.parent.right
         except AttributeError:
             return None
         
 
-    def traverse(self, key: str='in', value: bool=True) -> List['BST_Node']:
+    def traverse(self, key: str='in', node: bool=True) -> List['BST_Node']:
         '''
         returns a list containing all the items in the binary tree in the given order type
         in-order  ['in']: from min-to-max
@@ -104,7 +114,7 @@ class BST_Node(Generic[CT]):
 
         all_nodes = traversing_option[key](self, [])
 
-        if not value:
+        if node: 
             return all_nodes
 
         return [node.value for node in all_nodes]
@@ -163,10 +173,16 @@ class BST_Node(Generic[CT]):
         return self.right.find_max() 
 
 
-    def find_closest(self, value: CT) -> 'BST_Node':
-        '''find the node with the closest value to the given value'''
-        all_nodes = self.traverse(value=False)
-        return min(all_nodes, key=lambda node: abs(value - node.value))
+    def find_lt(self, value: CT) -> 'BST_Node':
+        '''find the node with the closest value that's less than the given value'''
+        filtered_nodes = filter(lambda node: node.value < value, self.traverse(node=True))
+        return min(filtered_nodes, key=lambda node: abs(value - node.value))
+
+
+    def find_gt(self, value: CT) -> 'BST_Node':
+        '''find the node with the closest value that's greater than the given value'''
+        filtered_nodes = filter(lambda node: node.value > value, self.traverse(node=True))
+        return min(filtered_nodes, key=lambda node: abs(value - node.value))
 
 
     def delete(self, value: CT) -> None:
@@ -385,10 +401,15 @@ class BST_Node(Generic[CT]):
                 parent_node.left = left_node
             else:
                 parent_node.right = left_node
-
+                
 
 @dataclass
 class Splay_Node(BST_Node):
+    '''
+    - the node class for the splay tree
+    - self-adjusting, recently searched/inserted/deleted node will be moved to the top for faster access
+    - for internal use only, shouldn't be used independently
+    '''
 
 
     def _update(self) -> Node:
