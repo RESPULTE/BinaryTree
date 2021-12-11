@@ -10,7 +10,7 @@ class Tree(Generic[CT]):
     all binary search tree variations should inherit this class 
     to obtain all the necessary interface functions
     '''
-    _node_type = None
+    _node_type: Node = None
 
 
     def __init__(self):
@@ -22,6 +22,7 @@ class Tree(Generic[CT]):
 
     @property
     def dtype(self):
+        '''returns the data type of that a tree contains'''
         return type(self.root.value)
     
 
@@ -218,6 +219,10 @@ class Tree(Generic[CT]):
             return self
         except TypeError:
             raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.dtype.__name__})'")
+
+
+    def __len__(self):
+        return len(self.traverse())
 
 
     def __iter__(self):

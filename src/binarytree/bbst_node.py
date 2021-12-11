@@ -29,6 +29,19 @@ class RBT_Node(BST_Node):
     is_red: bool = field(default=True, compare=False)
 
 
+    def get_root(self) -> 'RBT_Node':
+        '''
+        used to get the root of the tree
+        an acccessory function, totally unccessary, just thought that it'd make things a lil tider
+        '''
+        if self.parent == None: return self
+
+        node = self
+        while node.parent != None:
+            node = node.parent
+        return node
+
+
     def get_red_child(self) -> Union['RBT_Node', None]:
         '''
         returns a red child, if any, of the specific node
@@ -55,33 +68,36 @@ class RBT_Node(BST_Node):
             # the '_insert' function will return None if the value already exists in the binary tree
             new_node._update_insert() 
 
-            # only traverse and get the root node if this node (self)  
-            # which is, at the beginning, the root node has been changed
-            if self.parent != None:
-                # get the root of it 
-                node = self
-                while node.parent != None:
-                    node = node.parent
-                return node
+            return self.get_root()
 
 
     def _update_insert(self) -> None:
         '''
         _______________________________________________________________________________________________________
          CASE 1: uncle is [BLACK]
-
-          i. do neccessary rotation based on the relationship between the node, the node's parent & grandparent
-          ii. recolor the grandparent (before rotation) as red and the parent (before rotation) as black
         
-          consider the following example: 
-          [there's actually like 4 more emm... minor variations of this, 
-           but i cant be bothered to type that out, sooo... imagine it yourself lmao]
+          i. check the relationship betweeen the node, the node's parent and the node's grandparent
+            
+            - if the relationship forms a {<} or {>} shape:
+               ~> rotate the node to move it upwards 
 
-                   11(B)           7(B)
-                   /              /   \
-                  7(*)      => 5(*)   11(*)
-                 / 
-                5(*)
+                            |  [will continue with the process below] 
+                            v
+
+            - if the relationship forms a {/} or {\n} shape:
+               ~> rotate the node in the middle to move it upwards
+               ~> color the new 'top' node black
+               ~> color both of the child nodes of the 'top' node red
+               ~> end of process
+
+        
+         consider the following example:
+
+             11(B)            11(B)          7(B)
+            /                /              /   \n      
+          5(B)       =>   7(*)       =>   5(R)   11(R)
+            \n            /                                
+            7(*)        5(B)                     
         _______________________________________________________________________________________________________
          CASE 2: uncle is [RED] {recolor only}
         
@@ -100,15 +116,18 @@ class RBT_Node(BST_Node):
         ''' 
         if not self.parent or not self.parent.is_red: return None
 
-        # RE-COLORING PHASE
-        if self.uncle != None and self.uncle.is_red:                
+        # CASE 2
+        if self.uncle != None and self.uncle.is_red: 
+
+            # RECOLORING PHASE               
             self.grandparent.is_red = True
             self.uncle.is_red       = False
             self.parent.is_red      = False   
+
             self.grandparent._update_insert()
 
+        # CASE 1
         else:
-
             grandparent_node = self.grandparent
             parent_node      = self.parent
 
@@ -138,20 +157,14 @@ class RBT_Node(BST_Node):
 
         deleted_node = node_to_delete._delete_node()
 
-        # check if the node has any red child
-        # if not, the node will become a 'double black node' when deleted
-        # and that will have to be 'rebalanced' in the update function
+        # check if the deleted node has any red child
+        # if not, the node is considered as a 'double black node' when deleted
+        # and that will have to be rebalanced in the '_update_delete' method
         double_black = deleted_node.get_red_child() == []
 
         deleted_node._update_delete(double_black)
 
-        # only traverse and get the root node if this node (self)  
-        # which is, at the beginning, the root node has been changed
-        if self.parent != None:
-            node = self
-            while node.parent != None:
-                node = node.parent
-            return node
+        return self.get_root()
 
 
     def _update_delete(self, double_black: bool) -> None:
@@ -224,7 +237,7 @@ class RBT_Node(BST_Node):
                7(B)  15(DB)    7(*)   B(B)
         
         _______________________________________________________________________________________________________
-         CASE 3: if DB node's sibling is [RED]
+         CASE 3: if DB node's [sibling is RED]
          i. rotate the sibling node to move it upwards
         
          ii. color the old DB's sibling black and the DB's parent red
@@ -239,11 +252,16 @@ class RBT_Node(BST_Node):
                                  \
                                   15(DB)
         '''
+
+        # CASE 1 or 2: sibling is BLACK
         if not self.sibling.is_red:
 
             red_children = self.sibling.get_red_child()
 
+            # CASE 1: sibling has red children
             if red_children:
+
+                # ROTATION PHASE
                 if self.parent.right == self.sibling:
                     if self.sibling.left in red_children and len(red_children) == 1:
                         self.sibling._rotate_right()
@@ -253,11 +271,15 @@ class RBT_Node(BST_Node):
                         self.sibling._rotate_left()
                     self.parent._rotate_right()
 
+                # RE-COLROING PHASE
                 self.grandparent.is_red       = self.parent.is_red
                 self.grandparent.left.is_red  = False
                 self.grandparent.right.is_red = False 
 
+            # CASE 2: sibling has black children
             else:
+
+                # RE-COLORING PHASE
                 self.sibling.is_red = True
 
                 if not self.parent.is_red and self.grandparent != None:
@@ -265,12 +287,16 @@ class RBT_Node(BST_Node):
                 else:
                     self.parent.is_red = False
 
+        # CASE 3: sibling is black
         else:
+
+            # ROTATION PHASE
             if self.parent.right == self.sibling:
                 self.parent._rotate_left()
             else:
                 self.parent._rotate_right()
 
+            # RE-COLORING PHASE
             self.grandparent.is_red = False
             self.parent.is_red      = True
 
@@ -278,7 +304,7 @@ class RBT_Node(BST_Node):
 
 
     def __str__(self):
-        return str(f"[value: {self.value}, color: {'red' if self.is_red else 'black'}]")
+        return str(f"RBT_Node(value: {self.value}, color: {'red' if self.is_red else 'black'})")
 
 
 
@@ -312,7 +338,7 @@ class AVL_Node(BST_Node):
             return new_node._update() 
 
 
-    def delete(self, value: CT) -> None: 
+    def delete(self, value: CT) -> 'AVL_Node': 
         # find the node to be deleted in the tree
         # if its not in the tree, the 'find' function will raise an error about it
         node_to_delete = self.find(value) 
@@ -328,11 +354,19 @@ class AVL_Node(BST_Node):
         return new_root
 
 
-    def _update(self) -> None:
+    def _update(self) -> 'AVL_Node':
+        '''
+        internal function of the AVL node
+
+        responsible for:
+        - updating the balancing factor and height of nodes
+        - doing the neccessary rotations that is invloved
+        '''
         self._update_determinant()      
 
         if self.b_factor > 1 or self.b_factor < -1: 
             self._rebalance()  
+
         # keep going until the root node is reached
         # then, just return the node for caching in the <Tree> class
         if self.parent != None: 
@@ -344,32 +378,27 @@ class AVL_Node(BST_Node):
     def _rebalance(self) -> None:
         '''
         performs neccessary rotations based on the balancing factor of the node
-        
+        updates the balancing factor of the node and the height
+        -> to be used for the '_update' method
         '''
+        # ROTATION PHASE
         # the node is skewed to the left / 'left heavy'
         if self.b_factor == -2:
-
-            # LEFT-LEFT CASE
             if self.left.b_factor <= 0:
                 self._rotate_right()
-
-            # LEFT-RIGHT CASE
             else:
                 self.left._rotate_left()
                 self._rotate_right()
 
         # the node is skewed to the right / 'right heavy'
         if self.b_factor == +2:
-
-            # RIGHT-RIGHT CASE
             if self.right.b_factor >= 0:
                 self._rotate_left()
-
-            # RIGHT-LEFT CASE
             else:
                 self.right._rotate_right()
                 self._rotate_left()
 
+        # UPDATING PHASE
         if self.grandparent != None:
             self.grandparent._update_determinant()
         self.parent._update_determinant()
@@ -379,7 +408,7 @@ class AVL_Node(BST_Node):
     def _update_determinant(self) -> None:
         '''
         update the height and balancing factor for the specific node
-        -> to be used for the rebalance method
+        -> to be used for the '_rebalance' method
         '''
         # setting -1 as the default value if a node doesnt exist
         # since the height of a leaf node is by default 0
@@ -396,5 +425,3 @@ class AVL_Node(BST_Node):
         self.b_factor = right_height - left_height
 
 
-    def __str__(self):
-        return str(f'[value: {self.value}, height: {self.height}, b_factor: {self.b_factor}]')
