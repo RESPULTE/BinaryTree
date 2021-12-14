@@ -15,6 +15,7 @@ class BST_Node(Generic[CT]):
     left:   Optional['BST_Node'] = field(default=None, repr=False, compare=False)
     right:  Optional['BST_Node'] = field(default=None, repr=False, compare=False)
 
+
     @property
     def grandparent(self) -> Union['BST_Node', bool]:
         '''get the parent of the parent of the node, if any'''
@@ -28,12 +29,6 @@ class BST_Node(Generic[CT]):
     def uncle(self) -> Union['BST_Node', bool]:
         '''get the uncle of the parent of the node, if any'''
         try:
-            # in case the node calling this has been deleted
-            if self.grandparent.left == None: 
-                return self.grandparent.right
-            elif self.grandparent.right == None: 
-                return self.grandparent.left
-
             return self.grandparent.right if self.parent is self.grandparent.left else self.grandparent.left
         except AttributeError:
             return None
@@ -122,9 +117,6 @@ class BST_Node(Generic[CT]):
 
     def insert(self, value: CT) -> None:
         '''insert a value into the binary tree'''
-        if self.value is None:  
-            self.value = value
-            return 
         self._insert(value)
 
 
@@ -175,24 +167,20 @@ class BST_Node(Generic[CT]):
 
     def find_lt(self, value: CT) -> 'BST_Node':
         '''find the node with the closest value that's less than the given value'''
-        filtered_nodes = filter(lambda node: node.value < value, self.traverse(node=True))
-        return min(filtered_nodes, key=lambda node: abs(value - node.value))
+        filtered_nodes = list(filter(lambda node: node.value < value, self.traverse(node=True)))
+        if filtered_nodes:
+            return min(filtered_nodes, key=lambda node: abs(value - node.value))
 
 
     def find_gt(self, value: CT) -> 'BST_Node':
         '''find the node with the closest value that's greater than the given value'''
-        filtered_nodes = filter(lambda node: node.value > value, self.traverse(node=True))
-        return min(filtered_nodes, key=lambda node: abs(value - node.value))
+        filtered_nodes = list(filter(lambda node: node.value > value, self.traverse(node=True)))
+        if filtered_nodes:
+            return min(filtered_nodes, key=lambda node: abs(value - node.value))
 
 
-    def delete(self, value: CT) -> None:
+    def delete(self, node_to_delete: 'BST_Node') -> None:
         '''remove the given vaue from the binary tree'''
-
-        node_to_delete = self.find(value)
-        
-        if node_to_delete is None:
-            raise ValueError(f'{value} is not in {self.__class__.__name__}')
-
         node_to_delete._delete_node()   
 
 
@@ -411,7 +399,6 @@ class Splay_Node(BST_Node):
     - for internal use only, shouldn't be used independently
     '''
 
-
     def _update(self) -> Node:
         '''
         internal function for the splay tree's node
@@ -429,7 +416,7 @@ class Splay_Node(BST_Node):
         return self._update()
 
 
-    def insert(self, value: CT) -> Union[None, 'BST_Node']:
+    def insert(self, value: CT) -> Union[None, 'Splay_Node']:
         '''
         add a node with the given value into the tree
         update/splay the node to the root upon a succesfully insert
@@ -437,24 +424,17 @@ class Splay_Node(BST_Node):
         '''
         new_node = self._insert(value)
 
-        if not new_node: return None
-
-        return new_node._update()
+        if new_node: return new_node._update()
 
 
-    def delete(self, value: CT) -> Union[None, 'BST_Node']:
+    def delete(self, node_to_delete: 'Splay_Node') -> Union[None, 'Splay_Node']:
         '''
         remove the node that contains the specified value from the tree
         update/splay the parent of the deleted node to the root upon a succesfully delete
         returns a node to be designated as the 'root node' if the value is succesfully deleted
         '''
-        node_to_delete = self.find(value) 
-
-        if node_to_delete == None:
-            raise ValueError(f'{value} is not in {self.__class__.__name__}')
-
         node_to_splay = node_to_delete.parent 
 
         node_to_delete._delete_node()
 
-        return node_to_splay._update() if node_to_splay != None else None
+        if node_to_splay != None: return node_to_splay._update()

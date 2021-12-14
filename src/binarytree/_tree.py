@@ -22,6 +22,11 @@ class Tree(Generic[CT]):
 
 
     @property
+    def isempty(self):
+        return self.root == None
+
+
+    @property
     def dtype(self):
         '''returns the data type of that a tree contains'''
         return type(self.root.value)
@@ -178,14 +183,24 @@ class Tree(Generic[CT]):
         if self.root == None:
             self.root = self._node_type(value)
             return
+            
         new_root = self.root.insert(value)
+
         if new_root != None:
             self.root = new_root
 
 
     def delete(self, value: CT) -> None:
         '''remove the node that contains the specified value from the tree'''
-        new_root = self.root.delete(value)
+        node_to_delete = self.root.find(value)
+        if node_to_delete == None:
+            raise ValueError(f'{value} is not in {self.__class__.__name__}')
+
+        if self.root == node_to_delete:
+            self.root = None
+            return 
+
+        new_root = self.root.delete(node_to_delete)
         if new_root != None:
             self.root = new_root
 
@@ -204,31 +219,36 @@ class Tree(Generic[CT]):
     def find(self, value: CT, node: bool=False) -> Union[Node, CT]:
         '''get the node with the given value'''
         found_node = self.root.find(value)
-        return found_node.value if not node else found_node
+        if found_node:
+            return found_node.value if not node else found_node
 
 
     def find_lt(self, value: CT, node: bool=False) -> Union[Node, CT]:
         '''find the node with the closest value that is less than given value'''
         found_node = self.root.find_lt(value)
-        return found_node.value if not node else found_node
+        if found_node:
+            return found_node.value if not node else found_node
 
 
     def find_gt(self, value: CT, node: bool=False) -> Union[Node, CT]:
         '''find the node with the closest value that is greater the given value'''
         found_node = self.root.find_gt(value)
-        return found_node.value if not node else found_node
+        if found_node:
+            return found_node.value if not node else found_node
 
 
     def find_max(self, node: bool=False) -> Union[Node, CT]:
         '''get the node with the maximum value in the tree'''
         found_node = self.root.find_max()
-        return found_node.value if not node else found_node
+        if found_node:
+            return found_node.value if not node else found_node
 
 
     def find_min(self, node: bool=False) -> Union[Node, CT]:
         '''get the node with the minimum value in the tree'''
         found_node = self.root.find_min()
-        return found_node.value if not node else found_node
+        if found_node:
+            return found_node.value if not node else found_node
 
 
     def pop(self, value: CT=None, key: str='val') -> CT:
@@ -350,10 +370,10 @@ class Tree(Generic[CT]):
     def __getattribute__(self, attr_name):
         attr = super().__getattribute__(attr_name)
 
-        if isinstance(attr, MethodType) and attr_name != 'insert':
+        if isinstance(attr, MethodType) and attr_name not in ['delete', 'insert']:
             def root_checker(*args, **kwargs):
                 if self.root == None:
-                    return f'{type(self).__name__}(empty)'
+                    return None
                 result = attr(*args, **kwargs)
                 return result
             return root_checker
@@ -379,7 +399,8 @@ class Tree(Generic[CT]):
 
 
     def __iter__(self):
-        return iter((self.traverse(node=True)))
+        all_nodes = self.traverse(node=True)
+        return iter((all_nodes)) if all_nodes else iter([])
 
 
     def __contains__(self, value: CT) -> bool:

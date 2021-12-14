@@ -34,11 +34,11 @@ class RBT_Node(BST_Node):
         used to get the root of the tree
         an acccessory function, totally unccessary, just thought that it'd make things a lil tider
         '''
-        if self.parent == None: return self
-
         node = self
         while node.parent != None:
             node = node.parent
+
+        node.is_red = False
         return node
 
 
@@ -58,9 +58,9 @@ class RBT_Node(BST_Node):
 
     def insert(self, value: CT) -> Union['RBT_Node', None]:
         '''add a node with the given value into the tree'''
-        if self.parent is None: 
+        if self.parent == None:
             self.is_red = False
-
+            
         new_node = self._insert(value)
 
         if new_node: 
@@ -118,7 +118,6 @@ class RBT_Node(BST_Node):
 
         # CASE 2
         if self.uncle != None and self.uncle.is_red: 
-
             # RECOLORING PHASE               
             self.grandparent.is_red = True
             self.uncle.is_red       = False
@@ -148,13 +147,8 @@ class RBT_Node(BST_Node):
             grandparent_node.is_red = True
 
 
-    def delete(self, value: CT) -> 'RBT_Node':     
+    def delete(self, node_to_delete: 'RBT_Node') -> 'RBT_Node':     
         '''remove the node that contains the specified value from the tree'''
-        node_to_delete = self.find(value) 
-
-        if node_to_delete == None:
-            raise ValueError(f'{value} is not in {self.__class__.__name__}')
-
         deleted_node = node_to_delete._delete_node()
 
         # check if the deleted node has any red child
@@ -338,18 +332,14 @@ class AVL_Node(BST_Node):
             return new_node._update() 
 
 
-    def delete(self, value: CT) -> 'AVL_Node': 
-        # find the node to be deleted in the tree
-        # if its not in the tree, the 'find' function will raise an error about it
-        node_to_delete = self.find(value) 
-
-        node_to_delete._delete_node()
+    def delete(self, node_to_delete: 'AVL_Node') -> Union['AVL_Node', None]: 
+        deleted_node = node_to_delete._delete_node()
 
         # using the parent of the node that has been 'deleted' to do the update
         # because the node isn't actually deleted, it either 
         # - had its relationship with its parent cut off -> can't be accessed
         # - had its value overwritten by a child node
-        new_root = node_to_delete._update()
+        new_root = deleted_node._update()
 
         return new_root
 
@@ -402,8 +392,8 @@ class AVL_Node(BST_Node):
         if self.grandparent != None:
             self.grandparent._update_determinant()
         self.parent._update_determinant()
-        self._update_determinant()
-
+        self.parent.right._update_determinant()
+        self.parent.left._update_determinant()
 
     def _update_determinant(self) -> None:
         '''
@@ -423,5 +413,3 @@ class AVL_Node(BST_Node):
         # based on how 'balanced' its left_child and right_child is
         # i.e how similar they are in terms of their height
         self.b_factor = right_height - left_height
-
-
