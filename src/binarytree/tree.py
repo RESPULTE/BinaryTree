@@ -23,8 +23,8 @@ class RBT(Tree):
 
     _node_type = RBT_Node
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, key=None):
+        super().__init__(key)
 
 
     @property
@@ -74,8 +74,8 @@ class BST(Tree):
 
     _node_type = BST_Node
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, key=None):
+        super().__init__(key)
 
 
 class AVL(Tree):
@@ -95,8 +95,8 @@ class AVL(Tree):
 
     _node_type = AVL_Node
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, key=None):
+        super().__init__(key)
 
 
 class Splay(Tree):
@@ -113,8 +113,8 @@ class Splay(Tree):
 
     _node_type = Splay_Node
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, key=None):
+        super().__init__(key)
 
 
     def __getattribute__(self, attr_name):
@@ -130,13 +130,18 @@ class Splay(Tree):
             return attribute
 
         def node_splayer(*args, **kwargs):
-            found_node = attribute(*args, **kwargs)
+            # set the node to True to get the node for the splaying process
+            found_node = attribute(*args, node=True)
 
-            if not found_node: 
-                self.find_closest_node(*args, **kwargs)
-                return None
-                
-            self.root = found_node._update()    
-            return found_node
+            # splaying process
+            if found_node != None:
+                self.root = found_node._update() 
+
+            # if the user has not specificed the node parameter or if it's specified as False
+            # set the return value to the node's value
+            if not kwargs or ('node' in kwargs and kwargs['node'] == False):
+                found_node = found_node.value
+
+            return found_node 
 
         return node_splayer

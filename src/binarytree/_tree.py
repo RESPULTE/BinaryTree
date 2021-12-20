@@ -1,3 +1,4 @@
+from operator import attrgetter
 from types import MethodType
 from ._type_hint import *
 
@@ -14,7 +15,7 @@ class Tree(Generic[CT]):
     _node_type: Node = None
 
 
-    def __init__(self):
+    def __init__(self, key=None):
         self.root = None
 
         if self._node_type is None:
@@ -193,10 +194,15 @@ class Tree(Generic[CT]):
     def delete(self, value: CT) -> None:
         '''remove the node that contains the specified value from the tree'''
         node_to_delete = self.root.find(value)
+
         if node_to_delete == None:
             raise ValueError(f'{value} is not in {self.__class__.__name__}')
 
-        if self.root == node_to_delete:
+        # if the root's left and right subtree is both empty
+        # the node that needs to be deleted must be the root node
+        # since there's nothing left in the tree to swap the entires with, 
+        # just set the value of the root node to None
+        if self.root.left is None and self.root.right is None:
             self.root = None
             return 
 
@@ -218,37 +224,50 @@ class Tree(Generic[CT]):
 
     def find(self, value: CT, node: bool=False) -> Union[Node, CT]:
         '''get the node with the given value'''
-        found_node = self.root.find(value)
-        if found_node:
-            return found_node.value if not node else found_node
-
+        target_node = self.root.find(value)
+        if target_node:
+            return target_node.value if not node else target_node
 
     def find_lt(self, value: CT, node: bool=False) -> Union[Node, CT]:
-        '''find the node with the closest value that is less than given value'''
-        found_node = self.root.find_lt(value)
-        if found_node:
-            return found_node.value if not node else found_node
+        '''get the node with the given value'''
+        target_node = self.root.find_lt(value)
+        if target_node:
+            return target_node.value if not node else target_node 
 
 
     def find_gt(self, value: CT, node: bool=False) -> Union[Node, CT]:
-        '''find the node with the closest value that is greater the given value'''
-        found_node = self.root.find_gt(value)
-        if found_node:
-            return found_node.value if not node else found_node
+        '''find the node with the closest value that's less than the given value'''
+        target_node = self.root.find_gt(value)
+        if target_node:
+            return target_node.value if not node else target_node 
+
+
+    def find_le(self, value: CT, node: bool=False) -> Union[Node, CT]:
+        '''get the node with the given value'''
+        target_node = self.root.find_le(value)
+        if target_node:
+            return target_node.value if not node else target_node 
+
+
+    def find_ge(self, value: CT, node: bool=False) -> Union[Node, CT]:
+        '''find the node with the closest value that's less than the given value'''
+        target_node = self.root.find_ge(value)
+        if target_node:
+            return target_node.value if not node else target_node
 
 
     def find_max(self, node: bool=False) -> Union[Node, CT]:
         '''get the node with the maximum value in the tree'''
-        found_node = self.root.find_max()
-        if found_node:
-            return found_node.value if not node else found_node
+        target_node = self.root.find_max()
+        if target_node:
+            return target_node.value if not node else target_node
 
 
     def find_min(self, node: bool=False) -> Union[Node, CT]:
         '''get the node with the minimum value in the tree'''
-        found_node = self.root.find_min()
-        if found_node:
-            return found_node.value if not node else found_node
+        target_node = self.root.find_min()
+        if target_node:
+            return target_node.value if not node else target_node
 
 
     def pop(self, value: CT=None, key: str='val') -> CT:

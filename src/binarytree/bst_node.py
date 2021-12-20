@@ -10,7 +10,7 @@ class BST_Node(Generic[CT]):
     P.S: NOT to be used independantly as is, should use the 'Tree' class as the interface
     '''
 
-    value:  Optional[CT] = None
+    value:  Optional[CT]  = None
     parent: Optional['BST_Node'] = field(default=None, repr=False, compare=False)
     left:   Optional['BST_Node'] = field(default=None, repr=False, compare=False)
     right:  Optional['BST_Node'] = field(default=None, repr=False, compare=False)
@@ -150,6 +150,64 @@ class BST_Node(Generic[CT]):
             return self.right.find(value)
         return None
 
+    def find_gt(self, value: CT) -> Union[Node, CT]:
+        '''find the node with the closest value that's less than or equal to the given value'''
+        if value < self.value:
+            if self.left != None and value < self.left.value:
+                return self.left.find_gt(value)
+            else:
+                return self
+        else:
+            if self.right != None:
+                return self.right.find_gt(value)
+            return None
+
+
+    def find_lt(self, value: CT) -> Union[Node, CT]:
+        '''find the node with the closest value that's less than or equal to the given value'''
+        if value > self.value:
+            if self.right != None and value > self.right.value:
+                return self.right.find_lt(value)
+            else:
+                return self
+        else:
+            if self.left != None:
+                return self.left.find_lt(value)
+            return None
+
+
+    def find_le(self, value: CT) -> Union[Node, CT]:
+        '''find the node with the closest value that's less than or equal to the given value'''
+
+        # if the leaf node has been reached, but the value is still smaller than the smallest value in the tree
+        if not (self.left and self.right) and value < self.value:
+            return None
+
+        if self.value <= value and (self.right == None or self.right.value > value):
+            return self
+
+        if self.value >= value:
+            return self.left.find_lt(value)
+        else:
+            return self.right.find_lt(value)
+
+
+    def find_ge(self, value: CT) -> Union[Node, CT]:
+        '''find the node with the closest value that's more than or equal to the given value'''
+
+        # if the leaf node has been reached, but the value is still bigger than the biggest value in the tree
+        if not (self.left and self.right) and value > self.value:
+            return None
+
+        # if the node's value is greater or equal to the given value
+        if self.value >= value and (self.left == None or self.left.value < value):
+            return self
+
+        if self.value <= value:
+            return self.right.find_gt(value)
+        else:
+            return self.left.find_gt(value)
+
 
     def find_min(self) -> 'BST_Node':
         '''find the minimum value relative to a specific node in the binary tree'''
@@ -163,20 +221,6 @@ class BST_Node(Generic[CT]):
         if self.right is None:
             return self
         return self.right.find_max() 
-
-
-    def find_lt(self, value: CT) -> 'BST_Node':
-        '''find the node with the closest value that's less than the given value'''
-        filtered_nodes = list(filter(lambda node: node.value < value, self.traverse(node=True)))
-        if filtered_nodes:
-            return min(filtered_nodes, key=lambda node: abs(value - node.value))
-
-
-    def find_gt(self, value: CT) -> 'BST_Node':
-        '''find the node with the closest value that's greater than the given value'''
-        filtered_nodes = list(filter(lambda node: node.value > value, self.traverse(node=True)))
-        if filtered_nodes:
-            return min(filtered_nodes, key=lambda node: abs(value - node.value))
 
 
     def delete(self, node_to_delete: 'BST_Node') -> None:
@@ -258,14 +302,10 @@ class BST_Node(Generic[CT]):
 
         # CASE 1: node have 0 child
         if self.left is None and self.right is None:
-            if self.parent != None:
-                if self.parent.left == self:
-                    self.parent.left = None
-                else:
-                    self.parent.right = None
+            if self.parent.left == self:
+                self.parent.left = None
             else:
-                self.value = None
-
+                self.parent.right = None
             return self
 
         # CASE 2: node have 2 child
