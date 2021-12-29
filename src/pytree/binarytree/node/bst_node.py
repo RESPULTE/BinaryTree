@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from ._type_hint import *
+from pytree.binarytree._type_hint import *
 
 
 @dataclass(order=True)
@@ -59,7 +59,7 @@ class BST_Node(Generic[CT]):
         return depth
         
 
-    def traverse(self, key: str='in', node: bool=True) -> List['BST_Node']:
+    def traverse_node(self, key: str='in', node: bool=True) -> List['BST_Node']:
         '''
         returns a list containing all the items in the binary tree in the given order type
         in-order  ['in']: from min-to-max
@@ -124,12 +124,13 @@ class BST_Node(Generic[CT]):
         return [node.value for node in all_nodes]
 
 
-    def insert(self, value: CT) -> None:
+    def insert_node(self, value: CT) -> None:
         '''insert a value into the binary tree'''
-        self._insert(value)
+        new_node = self._insert_node(value)
+        if new_node: return self 
 
 
-    def _insert(self, value: CT) -> Union[None, 'BST_Node']:
+    def _insert_node(self, value: CT) -> Union[None, 'BST_Node']:
         '''internal function of the binary tree where the recursions happen'''
         if value == self.value: 
             return None
@@ -139,54 +140,54 @@ class BST_Node(Generic[CT]):
                 self.left = self.__class__(value, parent=self)
                 return self.left 
             else:
-                return self.left._insert(value)
+                return self.left._insert_node(value)
 
         elif value > self.value:
             if self.right is None:
                 self.right = self.__class__(value, parent=self)
                 return self.right
             else:
-                return self.right._insert(value)
+                return self.right._insert_node(value)
 
 
-    def find(self, value: CT) -> Union[None, 'BST_Node']:
+    def find_node(self, value: CT) -> Union[None, 'BST_Node']:
         '''search for the given value in the binary tree'''
         if self.value == value: 
             return self
         if value < self.value and self.left != None:
-            return self.left.find(value)
+            return self.left.find_node(value)
         elif value > self.value and self.right != None:
-            return self.right.find(value)
+            return self.right.find_node(value)
         return None
 
 
-    def find_gt(self, value: CT) -> Union[N, CT]:
+    def find_gt_node(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's less than or equal to the given value'''
         if value < self.value:
             if self.left != None and value < self.left.value:
-                return self.left.find_gt(value)
+                return self.left.find_gt_node(value)
             else:
                 return self
         else:
             if self.right != None:
-                return self.right.find_gt(value)
+                return self.right.find_gt_node(value)
             return None
 
 
-    def find_lt(self, value: CT) -> Union[N, CT]:
+    def find_lt_node(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's less than or equal to the given value'''
         if value > self.value:
             if self.right != None and value > self.right.value:
-                return self.right.find_lt(value)
+                return self.right.find_lt_node(value)
             else:
                 return self
         else:
             if self.left != None:
-                return self.left.find_lt(value)
+                return self.left.find_lt_node(value)
             return None
 
 
-    def find_le(self, value: CT) -> Union[N, CT]:
+    def find_le_node(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's less than or equal to the given value'''
 
         # if the leaf node has been reached, but the value is still smaller than the smallest value in the tree
@@ -197,12 +198,12 @@ class BST_Node(Generic[CT]):
             return self
 
         if self.value >= value:
-            return self.left.find_lt(value)
+            return self.left.find_lt_node(value)
         else:
-            return self.right.find_lt(value)
+            return self.right.find_lt_node(value)
 
 
-    def find_ge(self, value: CT) -> Union[N, CT]:
+    def find_ge_node(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's more than or equal to the given value'''
 
         # if the leaf node has been reached, but the value is still bigger than the biggest value in the tree
@@ -214,26 +215,26 @@ class BST_Node(Generic[CT]):
             return self
 
         if self.value <= value:
-            return self.right.find_gt(value)
+            return self.right.find_gt_node(value)
         else:
-            return self.left.find_gt(value)
+            return self.left.find_gt_node(value)
 
 
-    def find_min(self) -> 'BST_Node':
+    def find_min_node(self) -> 'BST_Node':
         '''find the minimum value relative to a specific node in the binary tree'''
         if self.left is None:
             return self
-        return self.left.find_min()     
+        return self.left.find_min_node()     
 
 
-    def find_max(self) -> 'BST_Node':
+    def find_max_node(self) -> 'BST_Node':
         '''find the maximum value relative to a specific node in the binary tree'''
         if self.right is None:
             return self
-        return self.right.find_max() 
+        return self.right.find_max_node() 
 
 
-    def delete(self, node_to_delete: 'BST_Node') -> None:
+    def delete_node(self, node_to_delete: 'BST_Node') -> None:
         '''remove the given vaue from the binary tree'''
         node_to_delete._delete_node()   
 
@@ -320,7 +321,7 @@ class BST_Node(Generic[CT]):
 
         # CASE 2: node have 2 child
         elif self.left and self.right:
-            successor_node = self.right.find_min()
+            successor_node = self.right.find_min_node()
             self.value = successor_node.value 
             return successor_node._delete_node()
 
@@ -441,209 +442,16 @@ class BST_Node(Generic[CT]):
                 parent_node.right = left_node
                 
 
-@dataclass
-class Splay_Node(BST_Node):
-    '''
-    - the node class for the splay tree
-    - self-adjusting, recently searched/inserted/deleted node will be moved to the top for faster access
-    - for internal use only, shouldn't be used independently
-    '''
-
-    def _update(self) -> N:
+    def get_root(self) -> 'BST_Node':
         '''
-        internal function for the splay tree's node
-        recursively move the intended node up until it is the root node
+        used to get the root of the tree
+        an acccessory function, totally unccessary, just thought that it'd make things a lil tider
         '''
-        if self.parent == None: 
-            return self
-
-        if self == self.parent.right:   
-            self.parent._rotate_left()
-
-        elif self == self.parent.left:
-            self.parent._rotate_right()
-
-        return self._update()
+        node = self
+        while node.parent != None:
+            node = node.parent
+        return node
 
 
-    def insert(self, value: CT) -> Union[None, 'Splay_Node']:
-        '''
-        add a node with the given value into the tree
-        update/splay the node to the root upon a succesfully insert
-        returns a node to be designated as the 'root node' if the value is succesfully inserted
-        '''
-        new_node = self._insert(value)
-
-        if new_node: return new_node._update()
 
 
-    def delete(self, node_to_delete: 'Splay_Node') -> Union[None, 'Splay_Node']:
-        '''
-        remove the node that contains the specified value from the tree
-        update/splay the parent of the deleted node to the root upon a succesfully delete
-        returns a node to be designated as the 'root node' if the value is succesfully deleted
-        '''
-        node_to_splay = node_to_delete.parent 
-
-        node_to_delete._delete_node()
-
-        if node_to_splay != None: return node_to_splay._update()
-
-
-@dataclass
-class KDT_Node(BST_Node):
-
-    dimension: int = field(default=2, repr=False, compare=False)
-
-
-    def _insert(self, value: CT, depth: int=0) -> Union[None, 'KDT_Node']:
-        '''internal function of the binary tree where the recursions happen'''
-        if value == self.value: 
-            return None
-
-        cd = depth % self.dimension 
-
-        if value[cd] < self.value[cd]:
-            if self.left is None:
-                self.left = self.__class__(value, parent=self)
-                return self.left 
-            else:
-                return self.left._insert(value, cd + 1)
-
-        elif value[cd] >= self.value[cd]:
-            if self.right is None:
-                self.right = self.__class__(value, parent=self)
-                return self.right
-            else:
-                return self.right._insert(value, cd + 1)
-
-
-    def delete(self, node_to_delete: 'KDT_Node') -> None:
-        node_to_delete._delete_node(node_to_delete.depth % self.dimension)
-
-
-    def _delete_node(self, node_dimension: int) -> None:
-        if self.right != None:
-            right_subtree_min = self.right.find_min(target_dimension=node_dimension, depth=node_dimension+1)
-            self.value = right_subtree_min.value
-            right_subtree_min._delete_node(right_subtree_min.depth % self.dimension)
-
-        elif self.left != None:
-            left_subtree_min = self.left.find_min(target_dimension=node_dimension, depth=node_dimension+1)
-            self.value = left_subtree_min.value
-            left_subtree_min._delete_node(left_subtree_min.depth % self.dimension)
-            if self.right == None and self.left != None:
-                self.right, self.left = self.left, self.right
-        else:
-            if self.parent.left == self:
-                self.parent.left = None
-            else:
-                self.parent.right = None
-
-
-    def find(self, value: CT, depth: int=0) -> Union[None, 'KDT_Node']:
-        '''search for the given value in the binary tree'''
-        if self.value == value: return self
-
-        cd = depth % self.dimension 
-
-        if value[cd] < self.value[cd] and self.left != None:
-            return self.left.find(value, cd + 1)
-        elif value[cd] >= self.value[cd] and self.right != None:
-            return self.right.find(value, cd + 1)
-        return None
-
-
-    def find_min(self, target_dimension: int=0, depth: int=0) -> 'KDT_Node':
-        # Recursively finds minimum of d'th dimension in KD tree
-        # The parameter depth is used to determine current axis.
-        cd = depth % self.dimension 
-      
-        # Compare point with root with respect to cd (Current dimension)
-        if cd == target_dimension: 
-            if self.left == None:
-                return self
-            return min(self, self.left.find_min(target_dimension, depth + 1), key=lambda node: node.value[target_dimension]);
-        
-      
-        # If current dimension is different then minimum can be anywhere in this subtree
-        local_min = [self]
-        if self.left != None:
-            local_min.append(self.left.find_min(target_dimension, depth + 1))
-        if self.right != None:
-            local_min.append(self.right.find_min(target_dimension, depth + 1))
-
-        return min(local_min, key=lambda node: node.value[target_dimension])
-
-
-    def find_max(self, target_dimension: int=0, depth: int=0) -> 'KDT_Node':
-        # Recursively finds minimum of d'th dimension in KD tree
-        # The parameter depth is used to determine current axis.
-        cd = depth % self.dimension 
-      
-        # Compare point with root with respect to cd (Current dimension)
-        if cd == target_dimension: 
-            if self.right == None:
-                return self
-            return max(self, self.right.find_max(target_dimension, depth + 1), key=lambda node: node.value[target_dimension]);
-        
-      
-        # If current dimension is different then minimum can be anywhere in this subtree
-        local_max = [self]
-        if self.left != None:
-            local_max.append(self.left.find_max(target_dimension, depth + 1))
-        if self.right != None:
-            local_max.append(self.right.find_max(target_dimension, depth + 1))
-
-        return max(local_max, key=lambda node: node.value[target_dimension])
-
-
-    def _find_closest(self, target_point, depth: int=0, best_nodes: List[Tuple[float, 'KDT_Node']]=[]):
-        cd = depth % self.dimension
-
-        next_branch  = self.right
-        other_branch = self.left
-
-        if target_point[cd] < self.value[cd]:
-            next_branch, other_branch = other_branch, next_branch
-            
-        temp_node = self
-        if next_branch != None:
-            temp_node: 'KDT_Node' = next_branch._find_closest(target_point, depth + 1, best_nodes)[-1][1]
-
-        curr_best: Tuple[float, 'KDT_Node'] = self._get_closest(self, temp_node, target_point)
-
-        best_nodes.append(curr_best)
-
-        dist_to_seperator = (target_point[cd] - self.value[cd])**2
-
-        if best_nodes[-1][0] >= dist_to_seperator:
-
-            if other_branch != None:
-                temp_node: 'KDT_Node' = other_branch._find_closest(target_point, depth + 1, best_nodes)[-1][1]
-
-            curr_best = self._get_closest(temp_node, best_nodes[-1][1], target_point)
-            best_nodes.append(curr_best)
-
-        return best_nodes
-
-
-    @staticmethod
-    def _get_closest(this_node, that_node, target_point) -> Tuple[float, 'KDT_Node']:
-        this_node_dist = KDT_Node._get_squared_distance(this_node.value, target_point)
-        that_node_dist = KDT_Node._get_squared_distance(that_node.value, target_point)
-
-        if this_node_dist < that_node_dist:
-
-            return this_node_dist, this_node
-
-        return that_node_dist, that_node
-
-
-    @staticmethod
-    def _get_squared_distance(point, other_point) -> float:
-        return sum((p1 - p2)**2 for p1, p2 in zip(point, other_point))
-
-
-    def __hash__(self):
-        return hash((self.value))

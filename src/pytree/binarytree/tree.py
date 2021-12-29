@@ -1,13 +1,12 @@
-from .bbst_node import *
-from .bst_node import *
-from ._tree import *
 from ._type_hint import *
+from ._tree import *
+from .node import *
 
 
 __all__ = ['RBT', 'BST', 'AVL', 'Splay', 'KDT']
 
 
-class RBT(Tree):
+class RBT(BinaryTree):
     '''
     - a type of Balanced Binary Search Tree that 
       does not maintain a strict height level for every node, but still
@@ -61,7 +60,7 @@ class RBT(Tree):
         return traversal_check(self.root)[0]
 
 
-class BST(Tree):
+class BST(BinaryTree):
     '''
     - a type of tree that stores values in nodes, based on the values
 
@@ -79,7 +78,7 @@ class BST(Tree):
         super().__init__()
 
 
-class AVL(Tree):
+class AVL(BinaryTree):
 
     '''
     - a type of Balanced Binary Search Tree that 
@@ -100,7 +99,7 @@ class AVL(Tree):
         super().__init__()
 
 
-class Splay(Tree):
+class Splay(BinaryTree):
     '''
     - a type of self-adjusting Binary Search Tree 
       that depends on the number of search of an item
@@ -136,7 +135,7 @@ class Splay(Tree):
 
             # splaying process
             if found_node != None:
-                self.root = found_node._update() 
+                self.root = found_node._update_node() 
 
             # if the user has not specificed the node parameter or if it's specified as False
             # set the return value to the node's value
@@ -148,14 +147,14 @@ class Splay(Tree):
         return node_splayer
 
 
-class KDT(Tree):
+class KDT(BinaryTree):
 
 
     _node_type = KDT_Node
 
     def __init__(self, dimension: int=2):
         super().__init__()
-        self.root = self._node_type(dimension=dimension)
+        self.root.dimension = dimension
 
 
     @property
@@ -196,7 +195,7 @@ class KDT(Tree):
     def find_closest(self, target_point, *, num: int=1, radius: float=0, dist: bool=False) -> 'KDT_Node':
         from heapq import nsmallest
 
-        closest_nodes = nsmallest(num, set(self.root._find_closest(target_point)))
+        closest_nodes = nsmallest(num, set(self.root._find_closest_node(target_point)))
         if dist or radius:
             point_and_dist = [(node.value, round(sqdist**0.5, 3)) for sqdist, node in closest_nodes]
             if not radius: 

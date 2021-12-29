@@ -2,7 +2,7 @@ from types import MethodType
 from ._type_hint import *
 
 
-class Tree(Generic[CT]):
+class BinaryTree(Generic[CT]):
     '''
     - This is the base class for all binary search tree 
     - it acts as an interface for the node classes
@@ -16,14 +16,22 @@ class Tree(Generic[CT]):
 
     def __init__(self):
         if self._node_type is None:
-            raise TypeError("Cannot instantiate abstract class.")
+            raise TypeError("Cannot instantiate base class.")
 
         self.root = self._node_type()
+        self._size = 0
+
+
+    @property
+    def size(self):
+        return self._size
 
 
     @property
     def dtype(self):
         '''returns the data type of that a tree contains'''
+        if self.root == None:
+            return None
         return type(self.root.value)
     
 
@@ -75,15 +83,15 @@ class Tree(Generic[CT]):
             # then, return True, as leaf nodes has no child nodes and are inherently balanced
             if node is None: return (True, -1)
 
-            left_height  = traversal_check(node.left)
-            right_height = traversal_check(node.right)
+            left_check  = traversal_check(node.left)
+            right_check = traversal_check(node.right)
             
             # check whether the left & right node is perfect
             # and whether the height the node is perfect
-            perfectness_check = (left_height[0] and right_height[0] and abs(left_height[1] - right_height[1]) == 0)
+            perfectness_check = (left_check[0] and right_check[0] and abs(left_check[1] - right_check[1]) == 0)
 
             # return the 'perfectness_check' variable and the height of the current node
-            return (perfectness_check, 1 + max(left_height[1], right_height[1]))
+            return (perfectness_check, 1 + max(left_check[1], right_check[1]))
 
         return traversal_check(self.root)[0]    
 
@@ -173,38 +181,73 @@ class Tree(Generic[CT]):
         return new_bst
 
 
-    def insert(self, value: CT) -> None:
+    def insert(self, value: CT) -> bool:
         '''add a node with the given value into the tree'''
-        if self.root == None:
-            self.root = self._node_type(value)
-            return
         if self.root.value == None:
             self.root.value = value
-            return
-        new_root = self.root.insert(value)
+            return True
+
+        new_root = self.root.insert_node(value)
 
         if new_root != None:
             self.root = new_root
+            return True
 
 
-    def delete(self, value: CT) -> None:
+    def delete(self, value: CT) -> bool:
         '''remove the node that contains the specified value from the tree'''
-        node_to_delete = self.root.find(value)
+        if self.root.value == None:
+            raise ValueError(f'{value} is not in {self.__class__.__name__}')
+
+        node_to_delete = self.root.find_node(value)
 
         if node_to_delete == None:
             raise ValueError(f'{value} is not in {self.__class__.__name__}')
 
-        # if the root's left and right subtree is both empty
-        # the node that needs to be deleted must be the root node
-        # since there's nothing left in the tree to swap the entires with, 
-        # just set the value of the root node to None
-        if self.root.left is None and self.root.right is None:
-            self.root = None
-            return 
-
-        new_root = self.root.delete(node_to_delete)
+        new_root = self.root.delete_node(node_to_delete)
+        
         if new_root != None:
             self.root = new_root
+
+        return True
+
+
+    def pop(self, value: CT=None, key: str=None) -> CT:
+        '''get and delete the given value from the tree'''
+        popping_options = {
+        'val': self.find,
+        'min': self.find_min,
+        'max': self.find_max
+        }
+
+        if self.root.value == None:
+            raise IndexError(f'trying to pop from an empty {type(self).__name__} tree')
+
+        if key != None and key not in popping_options:
+            raise ValueError(f'{key} given is not a valid option')
+
+        if key != None and value != None:
+            raise ValueError(f'only one of the arguements can be given')
+
+        # default settings for the pop method
+        popping_func = popping_options['min']
+
+        if value != None:
+            popping_func = lambda: popping_options['val'](value)
+        if key != None:
+            popping_func = popping_options[key]
+
+        found_val = popping_func()
+
+        self.delete(found_val)
+
+        return found_val
+
+
+    def clear(self) -> None:
+        self.root.left = None
+        self.root.right = None
+        self.root.value = None
 
 
     def traverse(self, key: str='in', node: bool=False) -> List[Union[Node, CT]]:
@@ -215,82 +258,64 @@ class Tree(Generic[CT]):
         post-order ['post']: root node as the end, from left to right
         level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
         '''
-        return self.root.traverse(key, node)
+        if self.root.value == None: return []
+        return self.root.traverse_node(key, node)
 
 
     def find(self, value: CT, node: bool=False) -> Union[Node, CT]:
         '''get the node with the given value'''
-        target_node = self.root.find(value)
+        target_node = self.root.find_node(value)
         if target_node:
             return target_node.value if not node else target_node
 
     def find_lt(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the given value'''
-        target_node = self.root.find_lt(value, **kwargs)
+        target_node = self.root.find_lt_node(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node 
 
 
     def find_gt(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''find the node with the closest value that's less than the given value'''
-        target_node = self.root.find_gt(value, **kwargs)
+        target_node = self.root.find_gt_node(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node 
 
 
     def find_le(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the given value'''
-        target_node = self.root.find_le(value, **kwargs)
+        target_node = self.root.find_le_node(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node 
 
 
     def find_ge(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''find the node with the closest value that's less than the given value'''
-        target_node = self.root.find_ge(value, **kwargs)
+        target_node = self.root.find_ge_node(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node
 
 
     def find_max(self, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the maximum value in the tree'''
-        target_node = self.root.find_max(**kwargs)
+        target_node = self.root.find_max_node(**kwargs)
         if target_node:
             return target_node.value if not node else target_node
 
 
     def find_min(self, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the minimum value in the tree'''
-        target_node = self.root.find_min(**kwargs)
+        target_node = self.root.find_min_node(**kwargs)
         if target_node:
             return target_node.value if not node else target_node
-
-
-    def pop(self, value: CT=None, key: str='val') -> CT:
-        '''get and delete the given value from the tree'''
-        popping_options = {
-        'val': self.find,
-        'min': self.find_min,
-        'max': self.find_max
-        }
-
-        if key not in popping_options:
-            raise ValueError(f'{key} given is not a valid option')
-
-        if (key != 'val' and value != None) or (key == 'val' and value == None):
-            raise ValueError(f'only one of the arguements can be given')
-
-        found_val = popping_options[key](value) if key == 'val' else popping_options[key]()
-
-        self.delete(found_val)
-
-        return found_val
 
 
     def __add__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
+            if self.dtype != other.dtype and \
+                not isinstance(self.root.value, type(None)) and \
+                not isinstance(other.root.value, type(None)):
                 raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
             return type(self).fill_tree([val for val in self] + [val for val in other])
 
@@ -303,9 +328,11 @@ class Tree(Generic[CT]):
     def __iadd__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
+            if self.dtype != other.dtype and \
+                not isinstance(self.root.value, type(None)) and \
+                not isinstance(other.root.value, type(None)):
                 raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
-            [self.insert(node.value) for node in other]
+            [self.insert(val) for val in other]
             return self
 
         try:
@@ -321,7 +348,9 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
-            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
+            if self.dtype != other.dtype and \
+                not isinstance(self.root.value, type(None)) and \
+                not isinstance(other.root.value, type(None)):
                 raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
             return type(self).fill_tree([val for val in self if val not in other])
 
@@ -337,7 +366,9 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
-            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
+            if self.dtype != other.dtype and \
+                not isinstance(self.root.value, type(None)) and \
+                not isinstance(other.root.value, type(None)):
                 raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
             
             [self.delete(val) for val in other if val in self]    
@@ -353,40 +384,51 @@ class Tree(Generic[CT]):
     def __getattribute__(self, attr_name):
         attr = super().__getattribute__(attr_name)
 
-        if isinstance(attr, MethodType) and attr_name not in ['delete', 'insert']:
+        methods_with_empty_root_handler = ['pop', 'traverse', 'insert', 'delete', 'clear']
+
+        if isinstance(attr, MethodType) and attr_name not in methods_with_empty_root_handler:
             def root_checker(*args, **kwargs):
                 if self.root.value == None:
-                    if attr_name == 'traverse':
-                        return []
                     return None
-                result = attr(*args, **kwargs)
-                return result
+                retval = attr(*args, **kwargs)
+                return retval
             return root_checker
-        else:
-            return attr
+
+        return attr
+        
 
 
     def __setattr__(self, attr_name, val):
         if attr_name == '_node_type':
-            raise ValueError(f'Node type of the tree cannot be altered!')
+            raise ValueError(f'{attr_name} of the tree cannot be altered!')
         super().__setattr__(attr_name, val)
 
 
     def __getitem__(self, key):
-        return self.root.find(key)
+        key = key % len(self) if key < 0 else key
+
+        def get_node_by_index(node: N, index: int=0) -> N:
+            if index == key: return node
+            if node.left:
+                return get_node_by_index(node.left, index + 1)
+            if node.right:
+                return get_node_by_index(node.right, index + 1)
+            raise IndexError(f'{key} is out of range!')
+
+        return get_node_by_index(self.root).value
 
 
     def __setitem__(self, key, value):
-        self.delete(key)
+        self.delete(self[key])
         self.insert(value)
 
 
     def __delitem__(self, key):
-        self.delete(key)
+        self.delete(self[key])
 
 
     def __len__(self):
-        return len(self.traverse())
+        return self._size
 
 
     def __iter__(self):
@@ -394,7 +436,9 @@ class Tree(Generic[CT]):
 
 
     def __contains__(self, value: CT) -> bool:
-        return self.root.find(value) != None
+        if self.root.value == None:
+            return False
+        return self.root.find_node(value) != None
 
 
     def __bool__(self) -> bool:

@@ -1,1 +1,1 @@
-from .tree import *
+from .binarytree import *
