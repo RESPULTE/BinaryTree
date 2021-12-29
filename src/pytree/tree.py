@@ -1,9 +1,10 @@
 from .bbst_node import *
 from .bst_node import *
 from ._tree import *
+from ._type_hint import *
 
 
-__all__ = ['RBT', 'BST', 'AVL', 'Splay']
+__all__ = ['RBT', 'BST', 'AVL', 'Splay', 'KDT']
 
 
 class RBT(Tree):
@@ -23,8 +24,8 @@ class RBT(Tree):
 
     _node_type = RBT_Node
 
-    def __init__(self, key=None):
-        super().__init__(key)
+    def __init__(self):
+        super().__init__()
 
 
     @property
@@ -74,8 +75,8 @@ class BST(Tree):
 
     _node_type = BST_Node
 
-    def __init__(self, key=None):
-        super().__init__(key)
+    def __init__(self):
+        super().__init__()
 
 
 class AVL(Tree):
@@ -95,8 +96,8 @@ class AVL(Tree):
 
     _node_type = AVL_Node
 
-    def __init__(self, key=None):
-        super().__init__(key)
+    def __init__(self):
+        super().__init__()
 
 
 class Splay(Tree):
@@ -113,8 +114,8 @@ class Splay(Tree):
 
     _node_type = Splay_Node
 
-    def __init__(self, key=None):
-        super().__init__(key)
+    def __init__(self):
+        super().__init__()
 
 
     def __getattribute__(self, attr_name):
@@ -124,7 +125,7 @@ class Splay(Tree):
         -> if the node that is search is invalid, 
             get the closest node available in the tree and splay that node
         '''
-        attribute = super(Splay, self).__getattribute__(attr_name)
+        attribute = super().__getattribute__(attr_name)
         
         if not ('find' in attr_name and callable(attribute)):
             return attribute
@@ -145,3 +146,67 @@ class Splay(Tree):
             return found_node 
 
         return node_splayer
+
+
+class KDT(Tree):
+
+
+    _node_type = KDT_Node
+
+    def __init__(self, dimension: int=2):
+        super().__init__()
+        self.root = self._node_type(dimension=dimension)
+
+
+    @property
+    def is_binary(self) -> bool:
+        '''
+        check whether the tree obeys the binary search tree's invariant
+        i.e:
+        - left node's value < node's value 
+        - right node's value > node's value
+        '''
+        def traversal_check(node: N, depth: int=0) -> bool:
+            # keep going down the chain of nodes 
+            # until the leftmost/rightmost node has been reached
+            # then, return True, as leaf nodes has no child nodes 
+            if node is None: return True
+
+            cd = depth % node.dimension
+            
+            left_check  = traversal_check(node.left, cd + 1)
+            right_check = traversal_check(node.right, cd + 1)
+            
+            # check whether the left & right node obey the BST invariant
+            check_binary = left_check and right_check
+
+            # then, check the node itself, whether it obeys the BST invariant
+            if node.left != None and node.left.value[cd] > node.value[cd]: 
+                check_binary = False
+                print(node, node.left, node.right, cd)
+            if node.right != None and node.right.value[cd] < node.value[cd]: 
+                check_binary = False
+                print(node, node.left, node.right, cd)
+
+            return check_binary
+
+        return traversal_check(self.root)
+
+
+    def find_closest(self, target_point, *, num: int=1, radius: float=0, dist: bool=False) -> 'KDT_Node':
+        from heapq import nsmallest
+
+        closest_nodes = nsmallest(num, set(self.root._find_closest(target_point)))
+        if dist or radius:
+            point_and_dist = [(node.value, round(sqdist**0.5, 3)) for sqdist, node in closest_nodes]
+            if not radius: 
+                return point_and_dist
+            return list(filter(lambda pnd: pnd[1] <= radius, point_and_dist))
+        return [node.value for _, node in closest_nodes]
+
+    
+    def __setattr__(self, attr_name, val):
+        if attr_name == 'dimension':
+            raise ValueError(f'dimension of the K-D tree cannot be altered!')
+        super().__setattr__(attr_name, val)
+        

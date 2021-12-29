@@ -20,13 +20,13 @@ class ComparableType(metaclass=ABCMeta):
 CT = TypeVar('CT', bound=ComparableType)
 
 
-class BinarySearchNode(metaclass=ABCMeta):
+class Node(metaclass=ABCMeta):
 
     @abstractmethod
-    def insert(self, value: CT) -> 'BinarySearchNode': ...
+    def insert(self, value: CT) -> 'Node': ...
 
     @abstractmethod
-    def delete(self, value: CT) -> 'BinarySearchNode': ...
+    def delete(self, value: CT) -> 'Node': ...
 
 
-Node = TypeVar('Node', bound=BinarySearchNode)
+N = TypeVar('Node', bound=Node)

@@ -1,4 +1,3 @@
-from operator import attrgetter
 from types import MethodType
 from ._type_hint import *
 
@@ -12,19 +11,14 @@ class Tree(Generic[CT]):
     all binary search tree variations should inherit this class 
     to obtain all the necessary interface functions
     '''
-    _node_type: Node = None
+    _node_type: N = None
 
 
-    def __init__(self, key=None):
-        self.root = None
-
+    def __init__(self):
         if self._node_type is None:
             raise TypeError("Cannot instantiate abstract class.")
 
-
-    @property
-    def isempty(self):
-        return self.root == None
+        self.root = self._node_type()
 
 
     @property
@@ -45,7 +39,7 @@ class Tree(Generic[CT]):
 
 
     @property
-    def iscomplete(self) -> bool:
+    def is_complete(self) -> bool:
         '''
         check whether the tree is complete,
         -> i.e all nodes of the tree either has 2 child or no child
@@ -70,7 +64,7 @@ class Tree(Generic[CT]):
 
 
     @property
-    def isperfect(self) -> bool:
+    def is_perfect(self) -> bool:
         '''
         check whether the tree is perfect
         -> i.e each branch of the tree has the same height
@@ -95,7 +89,7 @@ class Tree(Generic[CT]):
 
 
     @property
-    def isbinary(self) -> bool:
+    def is_binary(self) -> bool:
         '''
         check whether the tree obeys the binary search tree's invariant
         i.e:
@@ -115,7 +109,7 @@ class Tree(Generic[CT]):
             check_binary = left_check and right_check
 
             # then, check the node itself, whether it obeys the BST invariant
-            if node.left != None and node.left > node: 
+            if node.left != None and node.left >= node: 
                 check_binary = False
             if node.right != None and node.right < node: 
                 check_binary = False
@@ -126,7 +120,7 @@ class Tree(Generic[CT]):
 
 
     @property
-    def isbalanced(self) -> bool:
+    def is_balanced(self) -> bool:
         '''
         check whether the tree is balanced, i.e both side of the tree, 
         left & right have similar/same number of nodes
@@ -184,7 +178,9 @@ class Tree(Generic[CT]):
         if self.root == None:
             self.root = self._node_type(value)
             return
-            
+        if self.root.value == None:
+            self.root.value = value
+            return
         new_root = self.root.insert(value)
 
         if new_root != None:
@@ -228,44 +224,44 @@ class Tree(Generic[CT]):
         if target_node:
             return target_node.value if not node else target_node
 
-    def find_lt(self, value: CT, node: bool=False) -> Union[Node, CT]:
+    def find_lt(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the given value'''
-        target_node = self.root.find_lt(value)
+        target_node = self.root.find_lt(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node 
 
 
-    def find_gt(self, value: CT, node: bool=False) -> Union[Node, CT]:
+    def find_gt(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''find the node with the closest value that's less than the given value'''
-        target_node = self.root.find_gt(value)
+        target_node = self.root.find_gt(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node 
 
 
-    def find_le(self, value: CT, node: bool=False) -> Union[Node, CT]:
+    def find_le(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the given value'''
-        target_node = self.root.find_le(value)
+        target_node = self.root.find_le(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node 
 
 
-    def find_ge(self, value: CT, node: bool=False) -> Union[Node, CT]:
+    def find_ge(self, value: CT, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''find the node with the closest value that's less than the given value'''
-        target_node = self.root.find_ge(value)
+        target_node = self.root.find_ge(value, **kwargs)
         if target_node:
             return target_node.value if not node else target_node
 
 
-    def find_max(self, node: bool=False) -> Union[Node, CT]:
+    def find_max(self, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the maximum value in the tree'''
-        target_node = self.root.find_max()
+        target_node = self.root.find_max(**kwargs)
         if target_node:
             return target_node.value if not node else target_node
 
 
-    def find_min(self, node: bool=False) -> Union[Node, CT]:
+    def find_min(self, node: bool=False, **kwargs) -> Union[Node, CT]:
         '''get the node with the minimum value in the tree'''
-        target_node = self.root.find_min()
+        target_node = self.root.find_min(**kwargs)
         if target_node:
             return target_node.value if not node else target_node
 
@@ -290,22 +286,13 @@ class Tree(Generic[CT]):
 
         return found_val
 
+
     def __add__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            if other.root == None or self.root == None: 
-                if other.root != None:
-                    return type(self).fill_tree(other.traverse())
-                elif self.root != None:
-                    return type(self).fill_tree(self.traverse())
-                else:
-                    return type(self)()
-            if self.dtype != other.dtype:
+            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
                 raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
-            self_vals = self.traverse()
-            other_vals = other.traverse()
-            total_vals = [val for val in other_vals if val not in self_vals] + self_vals
-            return type(self).fill_tree(total_vals)
+            return type(self).fill_tree([val for val in self] + [val for val in other])
 
         try:
             return type(self).fill_tree(self.traverse()).insert(other)
@@ -316,20 +303,9 @@ class Tree(Generic[CT]):
     def __iadd__(self, other: Union[CT, 'Tree']) -> 'Tree':
         '''add this tree to another tree, omitting all repeated values'''
         if isinstance(other, type(self)):
-            if other.root == None or self.root == None: 
-                if self.root != None:
-                    return self
-                else:
-                    for node in other:
-                        self.insert(node.value)
-                    return self
-            if self.dtype != other.dtype:
+            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
                 raise TypeError(f"cannot add '{type(self).__name__}({self.dtype.__name__})' with '{type(other).__name__}({other.dtype.__name__})'")
-            self_vals = self.traverse()
-            other_vals = other.traverse()
-            for val in other_vals:
-                if val not in self_vals:
-                    self.insert(val)
+            [self.insert(node.value) for node in other]
             return self
 
         try:
@@ -345,17 +321,9 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
-            if other.root == None or self.root == None: 
-                if self.root != None:
-                    return type(self).fill_tree(self.traverse())
-                else:
-                    return type(self)()
-            if self.dtype != other.dtype:
+            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
                 raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
-            self_vals = self.traverse()
-            other_vals = other.traverse()
-            total_vals = [val for val in self_vals if val not in other_vals]
-            return type(self).fill_tree(total_vals)
+            return type(self).fill_tree([val for val in self if val not in other])
 
         try:
             return type(self).fill_tree(self.traverse()).delete(other)
@@ -369,14 +337,10 @@ class Tree(Generic[CT]):
         - only common values within both trees will be removed 
         '''
         if isinstance(other, type(self)):
-            if other.root == None or self.root == None: return self
-            if self.dtype != other.dtype:
+            if self.dtype != other.dtype and other.dtype != type(None) and self.dtype != type(None):
                 raise TypeError(f"cannot subtract {type(self).__name__}('{self.dtype.__name__}') from '{type(other).__name__}({other.dtype.__name__})'")
-            self_vals = self.traverse()
-            other_vals = other.traverse()
-            for val in other_vals:
-                if val in self_vals:
-                    self.delete(val)
+            
+            [self.delete(val) for val in other if val in self]    
             return self
         
         try:
@@ -391,13 +355,21 @@ class Tree(Generic[CT]):
 
         if isinstance(attr, MethodType) and attr_name not in ['delete', 'insert']:
             def root_checker(*args, **kwargs):
-                if self.root == None:
+                if self.root.value == None:
+                    if attr_name == 'traverse':
+                        return []
                     return None
                 result = attr(*args, **kwargs)
                 return result
             return root_checker
         else:
             return attr
+
+
+    def __setattr__(self, attr_name, val):
+        if attr_name == '_node_type':
+            raise ValueError(f'Node type of the tree cannot be altered!')
+        super().__setattr__(attr_name, val)
 
 
     def __getitem__(self, key):
@@ -418,12 +390,15 @@ class Tree(Generic[CT]):
 
 
     def __iter__(self):
-        all_nodes = self.traverse(node=True)
-        return iter((all_nodes)) if all_nodes else iter([])
+        yield from self.traverse()
 
 
     def __contains__(self, value: CT) -> bool:
         return self.root.find(value) != None
+
+
+    def __bool__(self) -> bool:
+        return self.root.value != None
 
 
     def __str__(self):

@@ -10,7 +10,7 @@ class BST_Node(Generic[CT]):
     P.S: NOT to be used independantly as is, should use the 'Tree' class as the interface
     '''
 
-    value:  Optional[CT]  = None
+    value:  Optional[CT] = None
     parent: Optional['BST_Node'] = field(default=None, repr=False, compare=False)
     left:   Optional['BST_Node'] = field(default=None, repr=False, compare=False)
     right:  Optional['BST_Node'] = field(default=None, repr=False, compare=False)
@@ -47,6 +47,16 @@ class BST_Node(Generic[CT]):
             return self.parent.left if self is self.parent.right else self.parent.right
         except AttributeError:
             return None
+
+
+    @property
+    def depth(self) -> int:
+        depth = 0
+        current_node = self
+        while current_node.parent != None:
+            current_node = current_node.parent
+            depth += 1
+        return depth
         
 
     def traverse(self, key: str='in', node: bool=True) -> List['BST_Node']:
@@ -103,7 +113,6 @@ class BST_Node(Generic[CT]):
         'pre': preorder_traversal,
         'lvl': levelorder_traversal
         }
-
         if key not in traversing_option:
             raise ValueError(f'{key} given is not a valid option')
 
@@ -150,7 +159,8 @@ class BST_Node(Generic[CT]):
             return self.right.find(value)
         return None
 
-    def find_gt(self, value: CT) -> Union[Node, CT]:
+
+    def find_gt(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's less than or equal to the given value'''
         if value < self.value:
             if self.left != None and value < self.left.value:
@@ -163,7 +173,7 @@ class BST_Node(Generic[CT]):
             return None
 
 
-    def find_lt(self, value: CT) -> Union[Node, CT]:
+    def find_lt(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's less than or equal to the given value'''
         if value > self.value:
             if self.right != None and value > self.right.value:
@@ -176,7 +186,7 @@ class BST_Node(Generic[CT]):
             return None
 
 
-    def find_le(self, value: CT) -> Union[Node, CT]:
+    def find_le(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's less than or equal to the given value'''
 
         # if the leaf node has been reached, but the value is still smaller than the smallest value in the tree
@@ -192,7 +202,7 @@ class BST_Node(Generic[CT]):
             return self.right.find_lt(value)
 
 
-    def find_ge(self, value: CT) -> Union[Node, CT]:
+    def find_ge(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's more than or equal to the given value'''
 
         # if the leaf node has been reached, but the value is still bigger than the biggest value in the tree
@@ -439,7 +449,7 @@ class Splay_Node(BST_Node):
     - for internal use only, shouldn't be used independently
     '''
 
-    def _update(self) -> Node:
+    def _update(self) -> N:
         '''
         internal function for the splay tree's node
         recursively move the intended node up until it is the root node
@@ -478,3 +488,162 @@ class Splay_Node(BST_Node):
         node_to_delete._delete_node()
 
         if node_to_splay != None: return node_to_splay._update()
+
+
+@dataclass
+class KDT_Node(BST_Node):
+
+    dimension: int = field(default=2, repr=False, compare=False)
+
+
+    def _insert(self, value: CT, depth: int=0) -> Union[None, 'KDT_Node']:
+        '''internal function of the binary tree where the recursions happen'''
+        if value == self.value: 
+            return None
+
+        cd = depth % self.dimension 
+
+        if value[cd] < self.value[cd]:
+            if self.left is None:
+                self.left = self.__class__(value, parent=self)
+                return self.left 
+            else:
+                return self.left._insert(value, cd + 1)
+
+        elif value[cd] >= self.value[cd]:
+            if self.right is None:
+                self.right = self.__class__(value, parent=self)
+                return self.right
+            else:
+                return self.right._insert(value, cd + 1)
+
+
+    def delete(self, node_to_delete: 'KDT_Node') -> None:
+        node_to_delete._delete_node(node_to_delete.depth % self.dimension)
+
+
+    def _delete_node(self, node_dimension: int) -> None:
+        if self.right != None:
+            right_subtree_min = self.right.find_min(target_dimension=node_dimension, depth=node_dimension+1)
+            self.value = right_subtree_min.value
+            right_subtree_min._delete_node(right_subtree_min.depth % self.dimension)
+
+        elif self.left != None:
+            left_subtree_min = self.left.find_min(target_dimension=node_dimension, depth=node_dimension+1)
+            self.value = left_subtree_min.value
+            left_subtree_min._delete_node(left_subtree_min.depth % self.dimension)
+            if self.right == None and self.left != None:
+                self.right, self.left = self.left, self.right
+        else:
+            if self.parent.left == self:
+                self.parent.left = None
+            else:
+                self.parent.right = None
+
+
+    def find(self, value: CT, depth: int=0) -> Union[None, 'KDT_Node']:
+        '''search for the given value in the binary tree'''
+        if self.value == value: return self
+
+        cd = depth % self.dimension 
+
+        if value[cd] < self.value[cd] and self.left != None:
+            return self.left.find(value, cd + 1)
+        elif value[cd] >= self.value[cd] and self.right != None:
+            return self.right.find(value, cd + 1)
+        return None
+
+
+    def find_min(self, target_dimension: int=0, depth: int=0) -> 'KDT_Node':
+        # Recursively finds minimum of d'th dimension in KD tree
+        # The parameter depth is used to determine current axis.
+        cd = depth % self.dimension 
+      
+        # Compare point with root with respect to cd (Current dimension)
+        if cd == target_dimension: 
+            if self.left == None:
+                return self
+            return min(self, self.left.find_min(target_dimension, depth + 1), key=lambda node: node.value[target_dimension]);
+        
+      
+        # If current dimension is different then minimum can be anywhere in this subtree
+        local_min = [self]
+        if self.left != None:
+            local_min.append(self.left.find_min(target_dimension, depth + 1))
+        if self.right != None:
+            local_min.append(self.right.find_min(target_dimension, depth + 1))
+
+        return min(local_min, key=lambda node: node.value[target_dimension])
+
+
+    def find_max(self, target_dimension: int=0, depth: int=0) -> 'KDT_Node':
+        # Recursively finds minimum of d'th dimension in KD tree
+        # The parameter depth is used to determine current axis.
+        cd = depth % self.dimension 
+      
+        # Compare point with root with respect to cd (Current dimension)
+        if cd == target_dimension: 
+            if self.right == None:
+                return self
+            return max(self, self.right.find_max(target_dimension, depth + 1), key=lambda node: node.value[target_dimension]);
+        
+      
+        # If current dimension is different then minimum can be anywhere in this subtree
+        local_max = [self]
+        if self.left != None:
+            local_max.append(self.left.find_max(target_dimension, depth + 1))
+        if self.right != None:
+            local_max.append(self.right.find_max(target_dimension, depth + 1))
+
+        return max(local_max, key=lambda node: node.value[target_dimension])
+
+
+    def _find_closest(self, target_point, depth: int=0, best_nodes: List[Tuple[float, 'KDT_Node']]=[]):
+        cd = depth % self.dimension
+
+        next_branch  = self.right
+        other_branch = self.left
+
+        if target_point[cd] < self.value[cd]:
+            next_branch, other_branch = other_branch, next_branch
+            
+        temp_node = self
+        if next_branch != None:
+            temp_node: 'KDT_Node' = next_branch._find_closest(target_point, depth + 1, best_nodes)[-1][1]
+
+        curr_best: Tuple[float, 'KDT_Node'] = self._get_closest(self, temp_node, target_point)
+
+        best_nodes.append(curr_best)
+
+        dist_to_seperator = (target_point[cd] - self.value[cd])**2
+
+        if best_nodes[-1][0] >= dist_to_seperator:
+
+            if other_branch != None:
+                temp_node: 'KDT_Node' = other_branch._find_closest(target_point, depth + 1, best_nodes)[-1][1]
+
+            curr_best = self._get_closest(temp_node, best_nodes[-1][1], target_point)
+            best_nodes.append(curr_best)
+
+        return best_nodes
+
+
+    @staticmethod
+    def _get_closest(this_node, that_node, target_point) -> Tuple[float, 'KDT_Node']:
+        this_node_dist = KDT_Node._get_squared_distance(this_node.value, target_point)
+        that_node_dist = KDT_Node._get_squared_distance(that_node.value, target_point)
+
+        if this_node_dist < that_node_dist:
+
+            return this_node_dist, this_node
+
+        return that_node_dist, that_node
+
+
+    @staticmethod
+    def _get_squared_distance(point, other_point) -> float:
+        return sum((p1 - p2)**2 for p1, p2 in zip(point, other_point))
+
+
+    def __hash__(self):
+        return hash((self.value))
