@@ -193,9 +193,7 @@ class KDT(BinaryTree):
 
 
     def find_closest(self, target_point, *, num: int=1, radius: float=0, dist: bool=False) -> 'KDT_Node':
-        from heapq import nsmallest
-
-        closest_nodes = nsmallest(num, set(self.root._find_closest_node(target_point)))
+        closest_nodes = self.root.find_closest_node(target_point, num)
         if dist or radius:
             point_and_dist = [(node.value, round(sqdist**0.5, 3)) for sqdist, node in closest_nodes]
             if not radius: 

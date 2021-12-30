@@ -10,10 +10,10 @@ class BST_Node(Generic[CT]):
     P.S: NOT to be used independantly as is, should use the 'Tree' class as the interface
     '''
 
-    value:  Optional[CT] = None
-    parent: Optional['BST_Node'] = field(default=None, repr=False, compare=False)
-    left:   Optional['BST_Node'] = field(default=None, repr=False, compare=False)
-    right:  Optional['BST_Node'] = field(default=None, repr=False, compare=False)
+    value:  CT         = None
+    parent: 'BST_Node' = field(default=None, repr=False, compare=False)
+    left:   'BST_Node' = field(default=None, repr=False, compare=False)
+    right:  'BST_Node' = field(default=None, repr=False, compare=False)
 
 
     @property
@@ -126,14 +126,13 @@ class BST_Node(Generic[CT]):
 
     def insert_node(self, value: CT) -> None:
         '''insert a value into the binary tree'''
-        new_node = self._insert_node(value)
-        if new_node: return self 
+        self._insert_node(value)
 
 
     def _insert_node(self, value: CT) -> Union[None, 'BST_Node']:
         '''internal function of the binary tree where the recursions happen'''
         if value == self.value: 
-            return None
+            return self
 
         if value < self.value:
             if self.left is None:

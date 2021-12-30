@@ -23,11 +23,6 @@ class BinaryTree(Generic[CT]):
 
 
     @property
-    def size(self):
-        return self._size
-
-
-    @property
     def dtype(self):
         '''returns the data type of that a tree contains'''
         if self.root == None:
@@ -181,20 +176,20 @@ class BinaryTree(Generic[CT]):
         return new_bst
 
 
-    def insert(self, value: CT) -> bool:
+    def insert(self, value: CT) -> None:
         '''add a node with the given value into the tree'''
         if self.root.value == None:
             self.root.value = value
-            return True
 
-        new_root = self.root.insert_node(value)
+        else:
+            new_root = self.root.insert_node(value)
+            if new_root != None:
+                self.root = new_root
 
-        if new_root != None:
-            self.root = new_root
-            return True
+        self._size += 1
 
 
-    def delete(self, value: CT) -> bool:
+    def delete(self, value: CT) -> None:
         '''remove the node that contains the specified value from the tree'''
         if self.root.value == None:
             raise ValueError(f'{value} is not in {self.__class__.__name__}')
@@ -208,8 +203,8 @@ class BinaryTree(Generic[CT]):
         
         if new_root != None:
             self.root = new_root
-
-        return True
+        
+        self._size -= 1
 
 
     def pop(self, value: CT=None, key: str=None) -> CT:
@@ -375,7 +370,7 @@ class BinaryTree(Generic[CT]):
             return self
         
         try:
-            self.insert(other)
+            self.delete(other)
             return self
         except TypeError:
             raise TypeError(f"cannot delete value of type '{other.__class__.__name__}' from '{self.__class__.__name__}({self.dtype.__name__})'")
@@ -405,17 +400,12 @@ class BinaryTree(Generic[CT]):
 
 
     def __getitem__(self, key):
-        key = key % len(self) if key < 0 else key
+        mod_key = len(self) - abs(key) if key < 0 else key
 
-        def get_node_by_index(node: N, index: int=0) -> N:
-            if index == key: return node
-            if node.left:
-                return get_node_by_index(node.left, index + 1)
-            if node.right:
-                return get_node_by_index(node.right, index + 1)
+        if mod_key > len(self)-1 or mod_key < 0:
             raise IndexError(f'{key} is out of range!')
 
-        return get_node_by_index(self.root).value
+        return self.traverse()[mod_key]
 
 
     def __setitem__(self, key, value):
