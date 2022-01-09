@@ -174,13 +174,5 @@ class KDT_Node(BST_Node):
         return _find_closest_node(self, [])
 
 
-    def __setattr__(self, attr_name, val):
-        if attr_name == 'value' and not isinstance(val, (tuple, type(None))) or \
-           isinstance(val, tuple) and not all(isinstance(v, (int, float)) for v in val):
-            raise ValueError('KD tree only accepts a tuple of int/float for its value')
-
-        super().__setattr__(attr_name, val)    
-
-
     def __hash__(self):
         return hash((self.value))

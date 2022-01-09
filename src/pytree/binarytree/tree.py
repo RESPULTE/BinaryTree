@@ -207,3 +207,9 @@ class KDT(BinaryTree):
             raise ValueError(f'dimension of the K-D tree cannot be altered!')
         super().__setattr__(attr_name, val)
         
+
+class WAVL(BinaryTree):
+    ...
+
+class Treap(BinaryTree):
+    ...
