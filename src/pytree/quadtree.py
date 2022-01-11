@@ -1,4 +1,4 @@
-from typing import Tuple, NewType, TypeVar, Optional, List, Union
+from typing import Tuple, NewType, TypeVar, Optional, List, Union, Set, Dict
 from collections import namedtuple
 
 
@@ -34,8 +34,11 @@ def split_box(bbox: BBox) -> List[BBox]:
     ]
 
 
-def get_area(bbox: BBox) -> float:
-    return bbox.w * bbox.h
+def is_inscribed(bbox1: BBox, bbox2: BBox) -> float:
+    return bbox2.x <= bbox1.x and \
+           bbox2.y <= bbox1.y and \
+           bbox2.x + bbox2.w >= bbox1.x + bbox1.w and \
+           bbox2.y + bbox2.h >= bbox1.y + bbox1.h
 
 
 class QuadEntityNode:
@@ -59,6 +62,11 @@ class QuadEntityNode:
 
     def __str__(self):
         return f'QuadEntityNode(next_index={self.next_index}, entity_id={self.entity_id}, owner_node={self.owner_node})'
+
+
+    def __repr__(self):
+        return f'QuadEntityNode(next_index={self.next_index}, entity_id={self.entity_id}, owner_node={self.owner_node})'
+
 
 
 class QuadNode:
@@ -94,9 +102,13 @@ class QuadNode:
         return f"QuadNode(first_child={self.first_child}, total_entity={self.total_entity}, parent_index={self.parent_index})"
 
 
+    def __repr__(self):
+        return f"QuadNode(first_child={self.first_child}, total_entity={self.total_entity}, parent_index={self.parent_index})"
+
+
 class QuadTree:
 
-    def __init__(self, bbox: BBox, capacity: int=2, max_depth: int=12, auto_id: bool=False):
+    def __init__(self, bbox: BBox, capacity: int=2, max_depth: int=12, max_division: int=4, auto_id: bool=False):
 
         if not isinstance(bbox, (type(None), tuple)) or not isinstance(bbox[0],  (int, float)):
             raise ValueError(f"bounding box of entity must be a tuple of 4 numbers ")
@@ -106,8 +118,9 @@ class QuadTree:
 
         self.bbox      = BBox(*bbox)
         self.capacity  = capacity
-        self.max_depth = max_depth
         self.auto_id   = auto_id
+        self.max_depth = max_depth
+        self.max_division = max_division
 
         self._free_quad_node_index   = -1
         self._free_entity_node_index = -1
@@ -126,7 +139,7 @@ class QuadTree:
 
     @property
     def num_entity(self):
-        return len(set([en.entity_id for en in self.all_entity_node if en.entity_id != None]))
+        return len(self.all_entity)
 
 
     @property
@@ -181,12 +194,15 @@ class QuadTree:
         returns the bounding box of a quad node depending on the position of the quad node in the quad tree
         the extra index paramter is for convenience sake since this is one of the core methods
         '''
+        if qnode == self.root:
+            return (0, self.bbox)
+
         qnode_index = self.all_quad_node.index(qnode)
         quadrants   = [(qnode_index - 1) % 4]
 
         # keep looping until the root node is reached
         # keep track of the quadrant of each node that has been traversed
-        while qnode != self.root:
+        while qnode.parent_index != 0:
             quadrants.append((qnode.parent_index - 1) % 4)
             qnode = self.all_quad_node[qnode.parent_index]
 
@@ -207,27 +223,26 @@ class QuadTree:
         returns a quad node that completely encompasses a given bbox
         the extra index paramter is also for convenience sake 
         '''
-        tbbox_area = get_area(tbbox)
         to_process = [(0, self.bbox)]
-
+        candidates = []
+        
         while to_process:           
 
             qindex, qbbox = to_process.pop()
+
             qnode = self.all_quad_node[qindex]
+  
+            if qnode.is_leaf and qnode.in_use:
+                candidates.append((qindex, qnode, qbbox))
+                continue
 
-            if qnode.total_entity != -1: break
-            
             for ind, quadrant in enumerate(split_box(qbbox)):
-
                 # compare the area of the splitted quadrant and target bbox, 
                 # only consider the quadrant if its area is >= the target bbox's area
-                if is_intersecting(tbbox, quadrant) and get_area(quadrant) >= tbbox_area:
-                    to_process.append((qnode.first_child + ind, quadrant))  
+                if is_intersecting(tbbox, quadrant) and is_inscribed(tbbox, quadrant):
+                    to_process.append((qnode.first_child + ind, quadrant)) 
 
-        # no need to keep a list of the quad node & its bbox
-        # since at any given moment there'll only be a single item in the to_process list
-        # the one that's popped the last and cannot be divided anymore will be the one that we're looking for
-        return (qnode, qbbox) if not index else (qindex, qnode, qbbox)
+        return min(candidates, key=lambda qnode: qnode[2].w * qnode[2].h)
 
 
     def find_leaves(self, 
@@ -242,6 +257,7 @@ class QuadTree:
         find the all the leaves that's encompassed by a quad node or a bounding bbox
         returns the found quad node, its bbox and its index (optional)
         '''
+
         if not qnode and not bbox: 
             raise ValueError("at least one or the other is required, 'qnode' or 'bbox'")
         if qnode and bbox: 
@@ -254,14 +270,18 @@ class QuadTree:
             qindex, _, qbbox = self.find_quad_node(tbbox=bbox, index=True)
 
         to_process = [(qindex, qbbox)]
+
         bounded_leaves = []
 
         while to_process:       
 
             qindex, qbbox = to_process.pop()
             qnode = self.all_quad_node[qindex]
+           
+            if not qnode.in_use: 
+                continue
         
-            if qnode.in_use: 
+            if qnode.is_leaf: 
                 quad_data = (qindex, qnode, qbbox) if index else (qnode, qbbox)
                 bounded_leaves.append(quad_data)
                 continue
@@ -272,68 +292,87 @@ class QuadTree:
 
         return bounded_leaves
     
-
+    # optimise
     def find_entity_node(self, 
         qnode: Optional['QuadNode']=None, 
         eid: Optional[UID]=None, 
+        bbox: Optional[BBox]=None,
         index: Optional[bool]=False
         ) -> Union[List[QuadEntityNode], List[Tuple[int, QuadEntityNode]]]:
         '''
         find the all the entity nodes that's encompassed by a quad node or that holds a given entity_id
         returns a list of the entity nodes found and their respective index (optional)
         '''
-        if qnode == None and eid == None: 
+        conditions = [qnode, eid, bbox]
+        if not any(conditions): 
             raise ValueError("at least one or the other is required, 'qnode' or 'eid'")
-        if qnode != None and eid != None: 
+        if all(conditions) or sum(1 for c in conditions if bool(c)) > 1: 
             raise ValueError("only one or the other is allowed, 'qnode' or 'eid'")   
 
-        # tag: for getting the required attribut of the entity nodes for sifting
-        # needle: for comparison during the sifting
-        tag = 'owner_node' if qnode else 'entity_id'
-        needle = qnode if qnode else eid
+        if qnode or eid:
+            # tag: for getting the required attribut of the entity nodes for sifting
+            # needle: for comparison during the sifting
+            tag = 'owner_node' if qnode else 'entity_id'
+            needle = qnode if qnode else eid
 
-        # whether qnode is given or not does not matter
-        # if it is given, but it's not a leaf node, get all the children node that's
-        # related to the given qnode
-        haystack = [qnode]
-        if qnode and not qnode.is_leaf:
-            haystack = [*self.find_leaves(qnode=qnode)]
-
-        entity_nodes = []
-        for qnode in haystack:
+            # whether qnode is given or not does not matter
+            # if it is given, but it's not a leaf node, get all the children node that's
+            # related to the given qnode
+            haystack = [qnode]
+            if qnode and not qnode.is_leaf:
+                haystack = [*self.find_leaves(qnode=qnode)]
 
             # if the needle that's given is a qnode
             # reset the needle to the qnode for each qnode in the haystack
             # however many there may be
-            if needle != eid: needle = qnode
+            entity_nodes = []
+            for qnode in haystack:
 
-            entity_nodes.extend(
-                [(ind, entity_node) if index else entity_node 
-                 for ind, entity_node in enumerate(self.all_entity_node) 
-                 if getattr(entity_node, tag)==needle]
+                if needle != eid: needle = qnode
+
+                entity_nodes.extend(
+                    [(ind, entity_node) if index else entity_node 
+                     for ind, entity_node in enumerate(self.all_entity_node) 
+                     if getattr(entity_node, tag)==needle]
             )   
+            return entity_nodes
+
+        haystack = self.find_leaves(bbox=bbox)
+
+        entity_nodes = []
+        for qnode, _ in haystack:
+
+            next_index  = qnode.first_child
+
+            while next_index != -1:
+                entity_node = self.all_entity_node[next_index]
+                entity_nodes.append(entity_node)
+                next_index  = entity_node.next_index
 
         return entity_nodes
 
 
-    def find_entity(self, eid: Optional[bool]=False, ebbox: Optional[BBox]=None) -> Union[Tuple[UID, BBox], List[Tuple[UID, BBox]]]:
-        '''
-        find the entity with a given entity id or all the entity within a given bbox
-        '''
-        # find all the entity within the given bbox
-        def find_entity_by_bbox(ebbox):
-            entities   = []
-            leaf_nodes = self.find_leaves(bbox=ebbox)
-            for leaf, _ in leaf_nodes:
-                entity_nodes = self.find_entity_node(qnode=leaf)
-                for en in entity_nodes:
-                    entities.append((en.entity_id, self.all_entity[en.entity_id]))
+    def query(self, bbox: Optional[BBox]=None, entity_bbox: Optional[bool]=False)-> List[Dict[Tuple[UID, BBox], List[Tuple[UID, BBox]]]]:
+        intersecting_entities: Dict[Tuple[UID, BBox], List[Tuple[UID, BBox]]] = {}
 
-        if not eid and not ebbox: 
-            raise ValueError("at least one or the other is required, 'ebbox' or 'eid'")
+        bbox = self.bbox if not bbox else BBox(*bbox)
 
-        if eid: return self.all_entity[eid]
-        if ebbox: return find_entity_by_bbox(ebbox)
+        for this_eid, this_bbox in self.all_entity.items():
+
+            intersecting_entities[(this_eid, this_bbox)] = []
+
+            for en in self.find_entity_node(bbox=this_bbox):
+
+                other_eid  = en.entity_id
+                other_bbox = self.all_entity[other_eid]
+
+                if other_bbox is this_bbox:
+                    continue
+
+                if is_intersecting(this_bbox, other_bbox):
+                    intersecting_entities[(this_eid, this_bbox)].append((other_eid, other_bbox))
+             
+        return intersecting_entities
 
 
     def delete(self, eid: UID) -> None:
@@ -341,46 +380,45 @@ class QuadTree:
         if eid not in self.all_entity:
             raise ValueError(f"{eid} is not in the entity_list")
         self.set_free_entity_nodes(self.find_entity_node(eid=eid, index=True))
+        self.all_entity = {k:v for k, v in self.all_entity.items() if k != eid}
         self.cleaned = False
 
 
     def clean_up(self) -> None:
-        self.clean_up_quad_node(self.root)
-        self.clean_up_entity()
+
+        def clean_up_quad_node(qnode: QuadNode) -> None:
+            # if the node is not in-use: 
+            # -> the node has been set free, no more work needs to be done for it
+            # if the node is not an empty leaf node
+            if not qnode.in_use or (qnode.is_leaf and qnode.total_entity > 0): 
+                return 0
+
+            if qnode.is_branch:
+
+                # if it is, recursively call this function upon all it's other 4 children
+                # if all of its children have 0 entity nodes in it, free all of its children and set it as an empty leaf
+                # reset the node's first_child to 1 if its a root node, or else it'll mess up future node allocations
+                first_child_index = qnode.first_child
+                if sum(clean_up_quad_node(self.all_quad_node[qnode.first_child + i]) for i in range(4)) == 4:
+                    self.set_free_quad_node(self.all_quad_node[first_child_index], first_child_index)
+                    if qnode == self.root: qnode.first_child = 1
+
+            # return 1 since the node is an empty leaf
+            return 1
+
+        clean_up_quad_node(self.root)
 
 
-    def clean_up_quad_node(self, qnode: QuadNode) -> None:
-        # if the node is not in-use: 
-        # -> the node has been set free, no more work needs to be done for it
-        # if the node is not an empty leaf node
-        if not qnode.in_use or (qnode.is_leaf and qnode.total_entity > 0): 
-            return 0
-
-        if qnode.is_branch:
-
-            # if it is, recursively call this function upon all it's other 4 children
-            # if all of its children have 0 entity nodes in it, free all of its children and set it as an empty leaf
-            # reset the node's first_child to 1 if its a root node, or else it'll mess up future node allocations
-            first_child_index = qnode.first_child
-            if sum(self.clean_up_quad_node(self.all_quad_node[qnode.first_child + i]) for i in range(4)) == 4:
-                self.set_free_quad_node(self.all_quad_node[first_child_index], first_child_index)
-                if qnode == self.root: qnode.first_child = 1
-
-        # return 1 since the node is an empty leaf
-        return 1
-
-
-    def clean_up_entity(self) -> None:
-        for eid, e in self.all_entity.items():
-            num_related_en = sum(1 for en in self.all_entity_node if en.entity_id == eid)
-            if num_related_en < 1:
-                del self.all_entity[eid]
-
-
-    def clear(self, cache=False) -> None:
-        [self.delete(eid) for eid in self.all_entity.keys()]
-        self.clean_up_quad_node(self.root)
+    def clear(self, clear_cache=False) -> None:
         self.all_entity.clear()
+
+        if clear_cache:
+            self.all_quad_node = self.all_quad_node[0:1]
+            self.all_entity_node.clear()
+            return 
+
+        [self.delete(eid) for eid in self.all_entity.keys()]
+        self.clean_up()
 
 
     def set_free_entity_nodes(self, indexed_entity_nodes: List[Tuple[int, QuadEntityNode]]) -> None:
@@ -390,7 +428,7 @@ class QuadTree:
                 owner_qnode.first_child = en.next_index
 
             else:
-                related_en = next(filter(lambda en: en.next_index == ind, self.find_entity_node(owner_qnode)))
+                related_en = next(filter(lambda en: en.next_index == ind, self.find_entity_node(qnode=owner_qnode)))
                 related_en.next_index = en.next_index
 
             en.update(
@@ -484,6 +522,31 @@ class QuadTree:
 
 
     def insert(self, entity_bbox: BBox, entity_id: Optional['UID']=None) -> None:
+
+        def division_insert(
+            entity_bbox: BBox, 
+            entity_id: Optional['UID']=None,
+            prev_qnode: QuadNode=None,
+            num_division: int=0) -> None:
+            if num_division > 10:
+                return
+            for qindex, qnode, _ in self.find_leaves(bbox=entity_bbox, index=True):
+                self.add_entity_node(qnode, entity_id)
+
+                if qnode.total_entity <= self.capacity or \
+                   num_division > self.max_division: 
+                    continue
+
+                #if prev_qnode == qnode: num_division += 1
+
+                entity_nodes = self.find_entity_node(qnode=qnode, index=True)
+                entity_ids   = [en.entity_id for _, en in entity_nodes]
+         
+                self.set_free_entity_nodes(entity_nodes)
+                self.set_branch(qnode, qindex)
+                
+                [division_insert(self.all_entity[eid], eid, qnode, num_division+1) for eid in entity_ids]
+
         if not all(isinstance(num, (int, float)) for num in entity_bbox):
             raise ValueError(f"bounding box of entity must be a tuple of 4 numbers ")
 
@@ -497,53 +560,40 @@ class QuadTree:
             self.clean_up()
             self.cleaned = True
 
-        if isinstance(entity_id, type(None)): 
-            entity_id = len(self.all_entity)
+        if isinstance(entity_id, type(None)):
+            int_id = filter(lambda id: isinstance(id, (int, float)), self.all_entity.keys()) 
+            if not int_id: int_id.append(0)
+            entity_id = max(int_id) + 1 if self.all_entity else 0
 
         if not isinstance(entity_bbox, BBox):
             entity_bbox = BBox(*entity_bbox)
 
         self.all_entity[entity_id] = entity_bbox
 
-        for qindex, qnode, _ in self.find_leaves(bbox=entity_bbox, index=True):
-
-            self.add_entity_node(qnode, entity_id)
-
-            if qnode.total_entity > self.capacity: 
-
-                entity_nodes = self.find_entity_node(qnode=qnode, index=True)
-                entity_ids   = [en.entity_id for _, en in entity_nodes]
-
-                self.set_free_entity_nodes(entity_nodes)
-
-                self.set_branch(qnode, qindex)
-
-                [self.insert(self.all_entity[eid], eid) for eid in entity_ids]
+        division_insert(entity_bbox, entity_id)
 
 
     def __len__(self) -> int:
-        return sum(node.total_entity for node in self.all_quad_node if node.in_use and node.is_leaf)
+        return len(self.all_entity)
 
 
 def main():
+
     a = QuadTree((0, 0, 1000, 1000), 2, auto_id=True)
-    a.insert((100, 100))
-    a.insert((120, 100))
-    a.insert((900, 100))
-    a.insert((100, 900))
-    a.clear()
-    a.insert((100, 100))
-    a.insert((120, 100))
-    a.insert((900, 100))
-    a.insert((100, 900))
-    a.clear()
 
+    #a.insert((1, 1))
+    #a.insert((10, 10))
+    #a.insert((80, 91))
+    #a.insert((1, 100))
 
-    for i in a.all_quad_node:
-        print(i)
-    for i in a.all_entity_node:
-        print(i)
-    print(a.num_entity)
+    #for i in a.find_leaves(bbox=BBox(*(800, 800, 120, 120))):
+     #   print(i)
+    #for i in a.all_quad_node:
+    #    print(a.get_bbox(i))
+    #for i in a.all_entity_node:
+    #    print(i)
+    #for i in a.all_entity.items():
+    #    print(i)
 
 if __name__ == '__main__':
     main()
