@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from pytree.binarytree._type_hint import *
+from pytree.binarytree._type_hint import CT, Union
 from .bst_node import BST_Node
 
 
@@ -13,7 +13,8 @@ class RBT_Node(BST_Node):
 
         i. a red parent cannot have any red child
         ii. the root must be black
-        iii. every path to every node must contain the same number of black node
+        iii. every path to every node must contain
+             the same number of black node
 
 
     - by far the most troublesome one that I've implemented
@@ -21,56 +22,59 @@ class RBT_Node(BST_Node):
     - I don't know how the heck anything works in this tree,
       all the steps to balance it sounds like magical mumbo-jumbo
 
-    - I don't even know if it works properly or not, 
+    - I don't even know if it works properly or not,
       it looks like it does, so... that's promising i guess?
 
     '''
 
     is_red: bool = field(default=True, compare=False)
 
-
     def get_red_child(self) -> Union['RBT_Node', None]:
         '''
         returns a red child, if any, of the specific node
-        - only used in the delete_node's internal function, '_resolve_double_black'
+        - only used in the delete_node's internal function,
+          '_resolve_double_black'
 
         '''
         red_children = []
-        if self.left != None and self.left.is_red: 
+        if self.left and self.left.is_red:
             red_children.append(self.left)
-        if self.right != None and self.right.is_red: 
+        if self.right and self.right.is_red:
             red_children.append(self.right)
         return red_children
 
-
     def insert_node(self, value: CT) -> Union['RBT_Node', None]:
         '''add a node with the given value into the tree'''
-        if self.parent == None:
+        if self.parent is None:
             self.is_red = False
-            
+
         new_node = self._insert_node(value)
 
-        if new_node: 
-            # only update the node if a new node has been inserted into the binary tree
-            # the '_insert_node' function will return None if the value already exists in the binary tree
-            new_node._update_insert() 
+        if new_node:
+            # only update the node
+            # -> if a new node has been inserted into the binary tree
+            # the '_insert_node' function will return None
+            # -> if the value already exists in the binary tree
+            new_node._update_insert()
 
             root = self.get_root()
             root.is_red = False
             return root
 
-
     def _update_insert(self) -> None:
         '''
         _______________________________________________________________________________________________________
          CASE 1: uncle is [BLACK]
-        
-          i. check the relationship betweeen the node, the node's parent and the node's grandparent
-            
-            - if the relationship forms a {<} or {>} shape:
-               ~> rotate the node to move it upwards 
 
-                            |  [will continue with the process below] 
+          i. check the relationship betweeen
+                - the node,
+                - the node's parent
+                - the node's grandparent
+
+            - if the relationship forms a {<} or {>} shape:
+               ~> rotate the node to move it upwards
+
+                            |  [will continue with the process below]
                             v
 
             - if the relationship forms a {/} or {\n} shape:
@@ -79,64 +83,65 @@ class RBT_Node(BST_Node):
                ~> color both of the child nodes of the 'top' node red
                ~> end of process
 
-        
+
          consider the following example:
 
              11(B)            11(B)          7(B)
-            /                /              /   \n      
+            /                /              /   \n
           5(B)       =>   7(*)       =>   5(R)   11(R)
-            \n            /                                
-            7(*)        5(B)                     
+            \n            /
+            7(*)        5(B)
         _______________________________________________________________________________________________________
          CASE 2: uncle is [RED] {recolor only}
-        
-          i. Change the colour of parent and uncle as BLACK. 
-          ii. Colour of a grandparent as RED. 
-          iii. Change x = x's grandparent, rinse and repeat until we reach the root node
+
+          i. Change the colour of parent and uncle as BLACK.
+          ii. Colour of a grandparent as RED.
+          iii. Change x = x's grandparent, rinse and repeat
+          until we reach the root node
 
           consider the following example:
 
                11(B)               11(*)
                /  \n               /   \
              7(*) 15(*)    =>    7(B)  15(B)
-             /                   / 
+             /                   /
             5(*)               5(*)
-        
-        ''' 
-        if not self.parent or not self.parent.is_red: return None
+
+        '''
+        if not self.parent or not self.parent.is_red:
+            return None
 
         # CASE 2
-        if self.uncle != None and self.uncle.is_red: 
-            # RECOLORING PHASE               
+        if self.uncle and self.uncle.is_red:
+            # RECOLORING PHASE
             self.grandparent.is_red = True
-            self.uncle.is_red       = False
-            self.parent.is_red      = False   
+            self.uncle.is_red = False
+            self.parent.is_red = False
 
             self.grandparent._update_insert()
 
         # CASE 1
         else:
             grandparent_node = self.grandparent
-            parent_node      = self.parent
+            parent_node = self.parent
 
             # ROTATION PHASE
             if parent_node == grandparent_node.left:
                 if parent_node.right == self:
-                    parent_node._rotate_left()                
-                grandparent_node._rotate_right() 
+                    parent_node._rotate_left()
+                grandparent_node._rotate_right()
 
             elif parent_node == grandparent_node.right:
                 if parent_node.left == self:
                     parent_node._rotate_right()
-                grandparent_node._rotate_left()  
+                grandparent_node._rotate_left()
 
             # RE-COLORING PHASE
-            self.is_red             = False if grandparent_node.parent == self else True
-            parent_node.is_red      = not self.is_red
+            self.is_red = False if grandparent_node.parent == self else True
+            parent_node.is_red = not self.is_red
             grandparent_node.is_red = True
 
-
-    def delete_node(self, node_to_delete: 'RBT_Node') -> 'RBT_Node':     
+    def delete_node(self, node_to_delete: 'RBT_Node') -> 'RBT_Node':
         '''remove the node that contains the specified value from the tree'''
         deleted_node = node_to_delete._delete_node()
 
@@ -151,82 +156,82 @@ class RBT_Node(BST_Node):
         root.is_red = False
         return root
 
-
     def _update_delete(self, double_black: bool) -> None:
         '''
-        an intermediate function for the potential 
+        an intermediate function for the potential
         need to resolve a 'double black node'
         '''
-        # if the node that's being deleted is a red node, change it to black and we're done
-        # keep in mind that node isn't actually being deleted, this node that has been 'deleted'
-        # only had its value swapped with a child node or had its relationship cut off with its parent
+        # if the node that's being deleted is a red node, change it to black
+        # keep in mind that node isn't actually being deleted,
+        # this node that has been 'deleted' only had its value swapped with
+        # a child node or had its relationship cut off with its parent
         # we don't really care which case it is, just color it black
         if self.is_red:
             self.is_red = False
-        elif self.parent != None and double_black:
+        elif self.parent and double_black:
             self._resolve_double_black()
-
 
     def _resolve_double_black(self) -> None:
         '''
-         P.S: i)  node with a (*) indicator at its side is a red node & [15] is the DB node
+         P.S: i)  node with a (*) indicator at its side is a red node
               ii) node marked with 'DB' is the node to be deleted
         _______________________________________________________________________________________________________
          CASE 1: the DB node's [sibling is BLACK] and has [RED child]
          i. check the position of the red child:
-            
-            - if there's only 1 red child AND it forms a {<} or {>} shape with its parent and grandparent:
-               ~> rotate the red child to move it upwards 
-               ~> color the red child black and its parent red (swap their color)
 
-                                                |  [will continue with the process below] 
+            - if there's only 1 red child AND it forms a {<} or {>} shape with
+                its parent and grandparent:
+               ~> rotate the red child to move it upwards
+               ~> color the red child. black and
+                  its parent red (swap their color)
+
+                                                |
                                                 v
 
-            - if there's 1 red child AND it forms a {/} or {\n} shape with its parent and grandparent 
-                OR there's 2 red child:
+            - if there's 1 red child AND it forms a {/} or {\n} shape with
+               its parent and grandparent OR there's 2 red child:
                ~> rotate the sibling to move it upwards
                ~> color both of the sibling's child (right & left) black
                ~> color the sibling the original color of the old parent
                ~> end of process
 
-        
-         consider the following example:
+
+consider the following example:
              11(B)              11(B)            7(B)
-            /   \n             /    \n           /  \n      
+            /   \n             /    \n           /  \n
           5(B)  15(DB)  =>   7(B) 15(DB)  =>  5(B)  11(B)    => [end recursion]
-            \n               /                        \n         
+            \n               /                        \n
             7(*)            5(*)                      15(B)
-       
         _______________________________________________________________________________________________________
-         CASE 2: if the DB node's [sibling is BLACK] and only have [BLACK CHILD]
+         CASE 2: if the DB node's [sibling is BLACK] and have [BLACK CHILD]
          i. color DB node's sibling red
-        
+
          ii. check the color of the parent node:
 
-             a) if the parent of DB node is red: 
+             a) if the parent of DB node is red:
                  ~> color it black
                  ~> end of process
 
              b) if the parent of DB node is already black:
                  ~> consider it as double black (DB)
                  ~> continue the recursion with the parent node
-              
+
          consider the following examples:
 
            i)    11(*)           11(B)
                 /  \n      =>   /  \n       => [end recursion]
               7(B) 15(DB)     7(*) 15(B)
-        
+
            ii)    11(B)          11(DB)
                  /    \n   =>    /   \n     => [continue recursion]
                7(B)  15(DB)    7(*)   B(B)
-        
+
         _______________________________________________________________________________________________________
          CASE 3: if DB node's [sibling is RED]
          i. rotate the sibling node to move it upwards
-        
+
          ii. color the old DB's sibling black and the DB's parent red
-        
+
          iii. continue the recursion on the DB node
 
          consider the following example:
@@ -248,18 +253,20 @@ class RBT_Node(BST_Node):
 
                 # ROTATION PHASE
                 if self.parent.right == self.sibling:
-                    if self.sibling.left in red_children and len(red_children) == 1:
+                    if self.sibling.left in red_children and len(
+                            red_children) == 1:
                         self.sibling._rotate_right()
                     self.parent._rotate_left()
                 else:
-                    if self.sibling.right in red_children and len(red_children) == 1:
+                    if self.sibling.right in red_children and len(
+                            red_children) == 1:
                         self.sibling._rotate_left()
                     self.parent._rotate_right()
 
                 # RE-COLROING PHASE
-                self.grandparent.is_red       = self.parent.is_red
-                self.grandparent.left.is_red  = False
-                self.grandparent.right.is_red = False 
+                self.grandparent.is_red = self.parent.is_red
+                self.grandparent.left.is_red = False
+                self.grandparent.right.is_red = False
 
             # CASE 2: sibling has black children
             else:
@@ -267,7 +274,7 @@ class RBT_Node(BST_Node):
                 # RE-COLORING PHASE
                 self.sibling.is_red = True
 
-                if not self.parent.is_red and self.grandparent != None:
+                if not self.parent.is_red and self.grandparent:
                     self.parent._resolve_double_black()
                 else:
                     self.parent.is_red = False
@@ -283,13 +290,11 @@ class RBT_Node(BST_Node):
 
             # RE-COLORING PHASE
             self.grandparent.is_red = False
-            self.parent.is_red      = True
+            self.parent.is_red = True
 
             self._resolve_double_black()
 
-
     def __str__(self):
-        return str(f"RBT_Node(value: {self.value}, color: {'red' if self.is_red else 'black'})")
-
-
-
+        return str(f" \
+            RBT_Node(value: {self.value}, \
+            color: {'red' if self.is_red else 'black'})")

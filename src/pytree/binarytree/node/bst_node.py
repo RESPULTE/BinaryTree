@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from pytree.binarytree._type_hint import *
+from pytree.binarytree._type_hint import CT, Union, N
 
 
 @dataclass(order=True)
@@ -10,11 +10,10 @@ class BST_Node(Generic[CT]):
     P.S: NOT to be used independantly as is, should use the 'Tree' class as the interface
     '''
 
-    value:  CT         = None
+    value: CT = None
     parent: 'BST_Node' = field(default=None, repr=False, compare=False)
-    left:   'BST_Node' = field(default=None, repr=False, compare=False)
-    right:  'BST_Node' = field(default=None, repr=False, compare=False)
-
+    left: 'BST_Node' = field(default=None, repr=False, compare=False)
+    right: 'BST_Node' = field(default=None, repr=False, compare=False)
 
     @property
     def grandparent(self) -> Union['BST_Node', bool]:
@@ -24,7 +23,6 @@ class BST_Node(Generic[CT]):
         except AttributeError:
             return None
 
-
     @property
     def uncle(self) -> Union['BST_Node', bool]:
         '''get the uncle of the parent of the node, if any'''
@@ -33,33 +31,32 @@ class BST_Node(Generic[CT]):
         except AttributeError:
             return None
 
-
     @property
     def sibling(self) -> Union['BST_Node', bool]:
         '''get the sibling of the node, if any'''
         try:
             # in case the node calling this has been deleted
-            if self.parent.left == None: 
+            if self.parent.left == None:
                 return self.parent.right
-            elif self.parent.right == None: 
+            elif self.parent.right == None:
                 return self.parent.left
 
             return self.parent.left if self is self.parent.right else self.parent.right
         except AttributeError:
             return None
 
-
     @property
     def depth(self) -> int:
         depth = 0
         current_node = self
-        while current_node.parent != None:
+        while current_node.parent:
             current_node = current_node.parent
             depth += 1
         return depth
-        
 
-    def traverse_node(self, key: str='in', node: bool=True) -> List['BST_Node']:
+    def traverse_node(self,
+                      key: str = 'in',
+                      node: bool = True) -> List['BST_Node']:
         '''
         returns a list containing all the items in the binary tree in the given order type
         in-order  ['in']: from min-to-max
@@ -67,7 +64,9 @@ class BST_Node(Generic[CT]):
         post-order ['post']: root node as the end, from left to right
         level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
         '''
-        def inorder_traversal(node: 'BST_Node', path: list) -> List['BST_Node']:
+
+        def inorder_traversal(node: 'BST_Node',
+                              path: list) -> List['BST_Node']:
             if node.left:
                 inorder_traversal(node.left, path)
             path.append(node)
@@ -75,7 +74,8 @@ class BST_Node(Generic[CT]):
                 inorder_traversal(node.right, path)
             return path
 
-        def postorder_traversal(node: 'BST_Node', path: list) -> List['BST_Node']:
+        def postorder_traversal(node: 'BST_Node',
+                                path: list) -> List['BST_Node']:
             if node.left:
                 postorder_traversal(node.left, path)
             if node.right:
@@ -83,7 +83,8 @@ class BST_Node(Generic[CT]):
             path.append(node)
             return path
 
-        def preorder_traversal(node: 'BST_Node', path: list) -> List['BST_Node']:
+        def preorder_traversal(node: 'BST_Node',
+                               path: list) -> List['BST_Node']:
             path.append(node)
             if node.left:
                 preorder_traversal(node.left, path)
@@ -91,7 +92,8 @@ class BST_Node(Generic[CT]):
                 preorder_traversal(node.right, path)
             return path
 
-        def levelorder_traversal(node: 'BST_Node', path: list) -> List['BST_Node']:
+        def levelorder_traversal(node: 'BST_Node',
+                                 path: list) -> List['BST_Node']:
             from collections import deque
 
             stack = deque([node])
@@ -100,44 +102,42 @@ class BST_Node(Generic[CT]):
                 node = stack.popleft()
                 path.append(node)
 
-                if node.left != None: 
+                if node.left:
                     stack.append(node.left)
-                if node.right != None: 
+                if node.right:
                     stack.append(node.right)
 
             return path
 
         traversing_option = {
-        'in': inorder_traversal, 
-        'post': postorder_traversal, 
-        'pre': preorder_traversal,
-        'lvl': levelorder_traversal
+            'in': inorder_traversal,
+            'post': postorder_traversal,
+            'pre': preorder_traversal,
+            'lvl': levelorder_traversal
         }
         if key not in traversing_option:
             raise ValueError(f'{key} given is not a valid option')
 
         all_nodes = traversing_option[key](self, [])
 
-        if node: 
+        if node:
             return all_nodes
 
         return [node.value for node in all_nodes]
-
 
     def insert_node(self, value: CT) -> None:
         '''insert a value into the binary tree'''
         self._insert_node(value)
 
-
     def _insert_node(self, value: CT) -> Union[None, 'BST_Node']:
         '''internal function of the binary tree where the recursions happen'''
-        if value == self.value: 
+        if value == self.value:
             return self
 
         if value < self.value:
             if self.left is None:
                 self.left = self.__class__(value, parent=self)
-                return self.left 
+                return self.left
             else:
                 return self.left._insert_node(value)
 
@@ -148,59 +148,64 @@ class BST_Node(Generic[CT]):
             else:
                 return self.right._insert_node(value)
 
-
     def find_node(self, value: CT) -> Union[None, 'BST_Node']:
         '''search for the given value in the binary tree'''
-        if self.value == value: 
+        if self.value == value:
             return self
-        if value < self.value and self.left != None:
+        if value < self.value and self.left:
             return self.left.find_node(value)
-        elif value > self.value and self.right != None:
+        elif value > self.value and self.right:
             return self.right.find_node(value)
         return None
 
-
     def find_gt_node(self, value: CT) -> Union[N, CT]:
-        '''find the node with the closest value that's less than or equal to the given value'''
+        '''
+        find the node with the closest value 
+        that's less than or equal to the given value
+        '''
         if value < self.value:
-            if self.left != None and value < self.left.value:
+            if self.left and value < self.left.value:
                 return self.left.find_gt_node(value)
             else:
                 return self
         else:
-            if self.right != None:
+            if self.right:
                 return self.right.find_gt_node(value)
             return None
 
-
     def find_lt_node(self, value: CT) -> Union[N, CT]:
-        '''find the node with the closest value that's less than or equal to the given value'''
+        '''
+        find the node with the closest value 
+        that's less than or equal to the given value
+        '''
         if value > self.value:
-            if self.right != None and value > self.right.value:
+            if self.right and value > self.right.value:
                 return self.right.find_lt_node(value)
             else:
                 return self
         else:
-            if self.left != None:
+            if self.left:
                 return self.left.find_lt_node(value)
             return None
 
-
     def find_le_node(self, value: CT) -> Union[N, CT]:
-        '''find the node with the closest value that's less than or equal to the given value'''
+        '''
+        find the node with the closest value 
+        that's less than or equal to the given value
+        '''
 
         # if the leaf node has been reached, but the value is still smaller than the smallest value in the tree
         if not (self.left and self.right) and value < self.value:
             return None
 
-        if self.value <= value and (self.right == None or self.right.value > value):
+        if self.value <= value and \
+           (self.right is None or self.right.value > value):
             return self
 
         if self.value >= value:
             return self.left.find_lt_node(value)
         else:
             return self.right.find_lt_node(value)
-
 
     def find_ge_node(self, value: CT) -> Union[N, CT]:
         '''find the node with the closest value that's more than or equal to the given value'''
@@ -210,7 +215,8 @@ class BST_Node(Generic[CT]):
             return None
 
         # if the node's value is greater or equal to the given value
-        if self.value >= value and (self.left == None or self.left.value < value):
+        if self.value >= value and (self.left == None
+                                    or self.left.value < value):
             return self
 
         if self.value <= value:
@@ -218,58 +224,61 @@ class BST_Node(Generic[CT]):
         else:
             return self.left.find_gt_node(value)
 
-
     def find_min_node(self) -> 'BST_Node':
         '''find the minimum value relative to a specific node in the binary tree'''
         if self.left is None:
             return self
-        return self.left.find_min_node()     
-
+        return self.left.find_min_node()
 
     def find_max_node(self) -> 'BST_Node':
         '''find the maximum value relative to a specific node in the binary tree'''
         if self.right is None:
             return self
-        return self.right.find_max_node() 
-
+        return self.right.find_max_node()
 
     def delete_node(self, node_to_delete: 'BST_Node') -> None:
         '''remove the given vaue from the binary tree'''
-        node_to_delete._delete_node()   
+        node_to_delete._delete_node()
 
-
-    def _delete_node(self) -> 'BST_Node': 
+    def _delete_node(self) -> 'BST_Node':
         '''
-        recursively going down the chain of nodes until a node with only 1 child or no child is found
-        then, perform necceesarily steps to make the node obselete (set to None)
+        recursively going down the chain of nodes until 
+        a node with only 1 child or no child is found
+        then, perform necceesarily steps to make the node obselete
 
          CASE 1: if the node have 0 child
           
-          if the node is not the root node, check the role of the node(right child/left child)
+          if the node is not the root node, 
+          -> check the role of the node(right child/left child)
           --> then, destroy the node's relationship with its parent
           if the node is the root node, set its value to None
         __________________________________________________________________________________________________________________________
          CASE 2: if the node have 2 child
          
-          --> get the child with the minimum value relative to the right child / 
-              get the child with the maximum value relative to the left child 
-              and recursively going down the chain from that child's position until a succesful deletion
+          --> get the child with the min value relative to the right child /
+              get the child with the max value relative to the left child
+              and recursively going down the chain from that child's position
+              until a succesful deletion
         
-          this will ensure that the chosen child fits the parent's position (doesn't violate any BST invariants), because
-            - if the child is the one with the maximum value relative to the left child
-              - replacing the parent with its value guarentees that all the child that's on the left 
-                has 'smaller' value than 'him' and all the child on the right has bigger value than him
-                [otherwise there's something wrong with the insertion to begin with]
+          this will ensure that the chosen child fits the parent's position
+          (doesn't violate any BST invariants)
+            - if the child is the one with the max value relative to the left child
+              - replacing the parent with its value guarentees that 
+                all the child that's on the left has 'smaller' value than 'him'
+                and all the child on the right has bigger value than him
+                [otherwise insertion has gone wrong to begin with]
         
-            * Vice versa for the other case (if the child is the one with the minimum value relative to the right child)
+            * Vice versa for the other case 
+              (if the child is the one with the min value relative to the right child)
         
          NOTE TO SELF:
          consider the following example:
          - the node to be deleted is the root node [7]
         
-           - the successor node in this case would be [8], 
-             since it is the one with the minimum value relative to the right child of the root node
-        
+           - the successor node in this case would be [8],
+             since it is the one with the min value 
+             relative to the right child of the root node
+             
              - [8] will be 'promoted' as the new root node / swap its value with the node to be deleted
         
                (This essentially 'deletes' the node since it has its original value replaced, 
@@ -278,7 +287,7 @@ class BST_Node(Generic[CT]):
                
                - the < _delete_node > function will then be called upon the original [8] node, 
                  in which the CASE 3 will be activated since there only ever will be at most 1 child for [8]
-                 or else [8] wouldn't have been the minimum node 
+                 or else [8] wouldn't have been the min node 
                     7
                  /      \
                 3        9
@@ -321,17 +330,17 @@ class BST_Node(Generic[CT]):
         # CASE 2: node have 2 child
         elif self.left and self.right:
             successor_node = self.right.find_min_node()
-            self.value = successor_node.value 
+            self.value = successor_node.value
             return successor_node._delete_node()
 
-        # CASE 3: node has 1 child 
+        # CASE 3: node has 1 child
         else:
-            child_node = self.left if self.left != None else self.right
+            child_node = self.left if self.left else self.right
 
             # if the node is not the root node
-            if self.parent != None:
+            if self.parent:
 
-                # rewire the relationship 
+                # rewire the relationship
                 child_node.parent = self.parent
                 if self.parent.left == self:
                     self.parent.left = child_node
@@ -343,16 +352,15 @@ class BST_Node(Generic[CT]):
 
                 # swap identity with the child node
                 self.__dict__ = child_node.__dict__
-                if child_node.right != None:
+                if child_node.right:
                     child_node.right.parent = self
-                if child_node.left != None:
+                if child_node.left:
                     child_node.left.parent = self
-                
+
                 # get rid of the cyclic reference after the identity swap
                 self.parent = None
-            
-            return child_node
 
+            return child_node
 
     def _rotate_left(self) -> None:
         """
@@ -376,11 +384,11 @@ class BST_Node(Generic[CT]):
         the right_child/left_child of P becomes X, depends on X's role
         """
         parent_node = self.parent
-        right_node  = self.right
-        self.right  = right_node.left
+        right_node = self.right
+        self.right = right_node.left
 
         # set the parent of the T2 to Y if T2 exists
-        if right_node.left != None: 
+        if right_node.left:
             right_node.left.parent = self
 
         # set the Y as X's left_child
@@ -390,13 +398,12 @@ class BST_Node(Generic[CT]):
         # set X's parent to P (Y's original parent)(maybe None)
         right_node.parent = parent_node
 
-        if parent_node != None:
+        if parent_node:
             # set the role of X based of the role of Y (right_child/left_child)
             if parent_node.right == self:
                 parent_node.right = right_node
             else:
                 parent_node.left = right_node
-
 
     def _rotate_right(self) -> None:
         """
@@ -419,11 +426,11 @@ class BST_Node(Generic[CT]):
         the right_child/left child of P becomes X, depends on X's role
         """
         parent_node = self.parent
-        left_node   = self.left
-        self.left   = left_node.right
+        left_node = self.left
+        self.left = left_node.right
 
         # set the parent of the T2 to Y if T2 exists
-        if left_node.right != None: 
+        if left_node.right:
             left_node.right.parent = self
 
         # set the Y as X's right_child
@@ -433,13 +440,12 @@ class BST_Node(Generic[CT]):
         # set X's parent to P (Y's original parent) (maybe None)
         left_node.parent = parent_node
 
-        if parent_node != None:
+        if parent_node:
             # set the role of X based of the role of Y (right_child/left_child)
             if parent_node.left == self:
                 parent_node.left = left_node
             else:
                 parent_node.right = left_node
-                
 
     def get_root(self) -> 'BST_Node':
         '''
@@ -447,10 +453,6 @@ class BST_Node(Generic[CT]):
         an acccessory function, totally unccessary, just thought that it'd make things a lil tider
         '''
         node = self
-        while node.parent != None:
+        while node.parent:
             node = node.parent
         return node
-
-
-
-

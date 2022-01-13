@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from pytree.binarytree._type_hint import *
+from pytree.binarytree._type_hint import CT, Union
 from .bst_node import BST_Node
 
 
@@ -14,10 +14,8 @@ class AVL_Node(BST_Node):
             - exceeding (1) -> right-skewed
             - exceeding (-1)-> left-skewed
 
-        ii. node without any child node will be considered to have a height of -1
+        ii. node without any child node will have a height of -1
 
-
-    P.S the value for the invariants can be changed depending on how its implemented
 
     '''
 
@@ -27,11 +25,12 @@ class AVL_Node(BST_Node):
     def insert_node(self, value: CT) -> Union['AVL_Node', None]:
         new_node = self._insert_node(value)
         if new_node:
-            # only update the node if a new node has been inserted into the binary tree
-            # the '_insert_node' function will return None if the value already exists in the binary tree
+            # only update the node if a new node has been inserted
+            # the '_insert_node' will return None if the value already exists
             return new_node._update_node()
 
-    def delete_node(self, node_to_delete: 'AVL_Node') -> Union['AVL_Node', None]:
+    def delete_node(self,
+                    node_to_delete: 'AVL_Node') -> Union['AVL_Node', None]:
         deleted_node = node_to_delete._delete_node()
 
         # using the parent of the node that has been 'deleted' to do the update
@@ -57,7 +56,7 @@ class AVL_Node(BST_Node):
 
         # keep going until the root node is reached
         # then, just return the node for caching in the <Tree> class
-        if self.parent != None:
+        if self.parent:
             return self.parent._update_node()
 
         return self
@@ -86,7 +85,7 @@ class AVL_Node(BST_Node):
                 self._rotate_left()
 
         # UPDATING PHASE
-        if self.grandparent != None:
+        if self.grandparent:
             self.grandparent._update_node_status()
         self.parent._update_node_status()
         self.parent.right._update_node_status()
@@ -102,7 +101,7 @@ class AVL_Node(BST_Node):
         left_height = self.left.height if self.left else -1
         right_height = self.right.height if self.right else -1
 
-        # getting the highest tree out of the 2 (left_child & right_child of the node)
+        # getting the highest tree out of the 2 (left_child & right_child)
         # and adding 1 to it for the new height of the node
         self.height = 1 + max(left_height, right_height)
 

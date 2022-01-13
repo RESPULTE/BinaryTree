@@ -1,1 +1,1 @@
-from .tree import *
+from .tree import *  # noqa
