@@ -92,7 +92,7 @@ class RBT_Node(BST_Node):
         
           i. Change the colour of parent and uncle as BLACK. 
           ii. Colour of a grandparent as RED. 
-          iii. Change x = x’s grandparent, rinse and repeat until we reach the root node
+          iii. Change x = x's grandparent, rinse and repeat until we reach the root node
 
           consider the following example:
 
