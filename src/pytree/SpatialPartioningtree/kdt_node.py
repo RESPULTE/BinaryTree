@@ -1,22 +1,9 @@
 from dataclasses import dataclass, field
-from pytree.binarytree._type_hint import Tuple, CT, Union, List
-from .bst_node import BST_Node
+from typing import Tuple, Union, List
+from pytree.binarytree.node.bst_node import BST_Node
 
-
-def get_squared_distance(point, other_point) -> float:
-    return sum((p1 - p2)**2 for p1, p2 in zip(point, other_point))
-
-
-def get_closest(this_node, that_node,
-                target_point) -> Tuple[float, 'KDT_Node']:
-    this_node_dist = get_squared_distance(this_node.value, target_point)
-    that_node_dist = get_squared_distance(that_node.value, target_point)
-
-    if this_node_dist < that_node_dist:
-
-        return this_node_dist, this_node
-
-    return that_node_dist, that_node
+from .type_hints import Point
+from .utils import get_closest
 
 
 @dataclass
@@ -32,7 +19,7 @@ class KDT_Node(BST_Node):
     dimension: int = field(default=2, repr=False, compare=False)
 
     def _insert_node(self,
-                     value: CT,
+                     value: Point,
                      depth: int = 0) -> Union[None, 'KDT_Node']:
         '''internal function of the binary tree where the recursions happen'''
         if value == self.value:
@@ -79,7 +66,9 @@ class KDT_Node(BST_Node):
             else:
                 self.parent.right = None
 
-    def find_node(self, value: CT, depth: int = 0) -> Union[None, 'KDT_Node']:
+    def find_node(self,
+                  value: Point,
+                  depth: int = 0) -> Union[None, 'KDT_Node']:
         '''search for the given value in the binary tree'''
         if self.value == value:
             return self
@@ -138,7 +127,8 @@ class KDT_Node(BST_Node):
 
     def find_closest_node(self, target_point, limit: int):
 
-        def check_and_add(node, best_nodes: list):
+        def check_and_add(node, best_nodes: List[Tuple[float,
+                                                       'KDT_Node']]) -> None:
             if node not in best_nodes:
                 best_nodes.append(node)
                 if len(best_nodes) > limit:
@@ -146,7 +136,7 @@ class KDT_Node(BST_Node):
 
         def _find_closest_node(
                 node: 'KDT_Node',
-                best_nodes: list,
+                best_nodes: List[Tuple[float, 'KDT_Node']],
                 depth: int = 0) -> List[Tuple[float, 'KDT_Node']]:
             cd = depth % node.dimension
 
@@ -161,7 +151,12 @@ class KDT_Node(BST_Node):
                 temp_node = _find_closest_node(next_branch, best_nodes,
                                                depth + 1)[-1][1]
 
-            curr_best = get_closest(node, temp_node, target_point)
+            curr_best_point = get_closest(node.value, temp_node.value,
+                                          target_point)
+
+            curr_best = node
+            if curr_best_point is temp_node.value:
+                curr_best = temp_node
 
             check_and_add(curr_best, best_nodes)
 
@@ -173,8 +168,12 @@ class KDT_Node(BST_Node):
                     temp_node = _find_closest_node(other_branch, best_nodes,
                                                    depth + 1)[-1][1]
 
-                curr_best = get_closest(temp_node, best_nodes[-1][1],
-                                        target_point)
+                curr_best = get_closest(temp_node.value,
+                                        best_nodes[-1][1].value, target_point)
+
+                curr_best = node
+                if curr_best_point is temp_node.value:
+                    curr_best = temp_node
 
                 check_and_add(curr_best, best_nodes)
 

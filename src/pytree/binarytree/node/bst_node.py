@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+from typing import Generic, List
+
 from pytree.binarytree._type_hint import CT, Union, N
 
 
@@ -6,8 +8,10 @@ from pytree.binarytree._type_hint import CT, Union, N
 class BST_Node(Generic[CT]):
     '''
     - a basic binary search tree node
-    - has a double reference, i.e the child and parent both references each other
-    P.S: NOT to be used independantly as is, should use the 'Tree' class as the interface
+    - has a double reference, i.e the child and parent
+      both references each other
+    P.S: NOT to be used independantly as is,
+         should use the 'Tree' class as the interface
     '''
 
     value: CT = None
@@ -27,7 +31,10 @@ class BST_Node(Generic[CT]):
     def uncle(self) -> Union['BST_Node', bool]:
         '''get the uncle of the parent of the node, if any'''
         try:
-            return self.grandparent.right if self.parent is self.grandparent.left else self.grandparent.left
+            return self.grandparent.right \
+                   if self.parent is self.grandparent.left \
+                   else self.grandparent.left
+
         except AttributeError:
             return None
 
@@ -36,12 +43,14 @@ class BST_Node(Generic[CT]):
         '''get the sibling of the node, if any'''
         try:
             # in case the node calling this has been deleted
-            if self.parent.left == None:
+            if self.parent.left is None:
                 return self.parent.right
-            elif self.parent.right == None:
+            elif self.parent.right is None:
                 return self.parent.left
 
-            return self.parent.left if self is self.parent.right else self.parent.right
+            return self.parent.left \
+                if self is self.parent.right \
+                else self.parent.right
         except AttributeError:
             return None
 
@@ -58,9 +67,9 @@ class BST_Node(Generic[CT]):
                       key: str = 'in',
                       node: bool = True) -> List['BST_Node']:
         '''
-        returns a list containing all the items in the binary tree in the given order type
+        returns a list all the items in the binary tree in the given order type
         in-order  ['in']: from min-to-max
-        pre-order ['pre']: root node as the beginning, from left to right, kinda like DFS
+        pre-order ['pre']: root node as the beginning, from left to right
         post-order ['post']: root node as the end, from left to right
         level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
         '''
@@ -160,7 +169,7 @@ class BST_Node(Generic[CT]):
 
     def find_gt_node(self, value: CT) -> Union[N, CT]:
         '''
-        find the node with the closest value 
+        find the node with the closest value
         that's less than or equal to the given value
         '''
         if value < self.value:
@@ -175,7 +184,7 @@ class BST_Node(Generic[CT]):
 
     def find_lt_node(self, value: CT) -> Union[N, CT]:
         '''
-        find the node with the closest value 
+        find the node with the closest value
         that's less than or equal to the given value
         '''
         if value > self.value:
@@ -190,11 +199,12 @@ class BST_Node(Generic[CT]):
 
     def find_le_node(self, value: CT) -> Union[N, CT]:
         '''
-        find the node with the closest value 
+        find the node with the closest value
         that's less than or equal to the given value
         '''
 
-        # if the leaf node has been reached, but the value is still smaller than the smallest value in the tree
+        # if the leaf node has been reached, but the value is still smaller
+        # than the smallest value in the tree
         if not (self.left and self.right) and value < self.value:
             return None
 
@@ -208,14 +218,15 @@ class BST_Node(Generic[CT]):
             return self.right.find_lt_node(value)
 
     def find_ge_node(self, value: CT) -> Union[N, CT]:
-        '''find the node with the closest value that's more than or equal to the given value'''
+        '''find the node with the closest value that's >= the given value'''
 
-        # if the leaf node has been reached, but the value is still bigger than the biggest value in the tree
+        # if the leaf node has been reached, but the value is still bigger
+        # than the biggest value in the tree
         if not (self.left and self.right) and value > self.value:
             return None
 
         # if the node's value is greater or equal to the given value
-        if self.value >= value and (self.left == None
+        if self.value >= value and (self.left is None
                                     or self.left.value < value):
             return self
 
@@ -225,13 +236,13 @@ class BST_Node(Generic[CT]):
             return self.left.find_gt_node(value)
 
     def find_min_node(self) -> 'BST_Node':
-        '''find the minimum value relative to a specific node in the binary tree'''
+        '''find the minimum value relative to a specific node in the tree'''
         if self.left is None:
             return self
         return self.left.find_min_node()
 
     def find_max_node(self) -> 'BST_Node':
-        '''find the maximum value relative to a specific node in the binary tree'''
+        '''find the maximum value relative to a specific node in the tree'''
         if self.right is None:
             return self
         return self.right.find_max_node()
@@ -242,79 +253,89 @@ class BST_Node(Generic[CT]):
 
     def _delete_node(self) -> 'BST_Node':
         '''
-        recursively going down the chain of nodes until 
+        recursively going down the chain of nodes until
         a node with only 1 child or no child is found
         then, perform necceesarily steps to make the node obselete
 
          CASE 1: if the node have 0 child
-          
-          if the node is not the root node, 
+
+          if the node is not the root node,
           -> check the role of the node(right child/left child)
           --> then, destroy the node's relationship with its parent
           if the node is the root node, set its value to None
-        __________________________________________________________________________________________________________________________
+        _____________________________________________________________________________________________
          CASE 2: if the node have 2 child
-         
+
           --> get the child with the min value relative to the right child /
               get the child with the max value relative to the left child
               and recursively going down the chain from that child's position
               until a succesful deletion
-        
+
           this will ensure that the chosen child fits the parent's position
           (doesn't violate any BST invariants)
-            - if the child is the one with the max value relative to the left child
-              - replacing the parent with its value guarentees that 
+            - if the child is the one with the max value
+              relative to the left child
+              - replacing the parent with its value guarentees that
                 all the child that's on the left has 'smaller' value than 'him'
                 and all the child on the right has bigger value than him
                 [otherwise insertion has gone wrong to begin with]
-        
-            * Vice versa for the other case 
-              (if the child is the one with the min value relative to the right child)
-        
+
+            * Vice versa for the other case
+              (if the child is the one with the min value
+               relative to the right child)
+
          NOTE TO SELF:
          consider the following example:
          - the node to be deleted is the root node [7]
-        
+
            - the successor node in this case would be [8],
-             since it is the one with the min value 
+             since it is the one with the min value
              relative to the right child of the root node
-             
-             - [8] will be 'promoted' as the new root node / swap its value with the node to be deleted
-        
-               (This essentially 'deletes' the node since it has its original value replaced, 
-                even though that the underlying object of the node is still the same 
-                {i.e no new node has been created in the process})
-               
-               - the < _delete_node > function will then be called upon the original [8] node, 
-                 in which the CASE 3 will be activated since there only ever will be at most 1 child for [8]
-                 or else [8] wouldn't have been the min node 
+
+             - [8] will be 'promoted' as the new root node / swap its value
+                   with the node to be deleted
+
+               (This essentially 'deletes' the node
+                since it has its original value replaced,
+                even though that the underlying object of the node
+                is still the same
+                {i.e no new node has been created in the process}
+                )
+
+               - the < _delete_node > function will then be
+                 called upon the original [8] node,
+                 in which the CASE 3 will be activated
+                 since there only ever will be at most 1 child for [8]
+                 or else [8] wouldn't have been the min node
                     7
                  /      \
                 3        9
               /   \n    /  \
-             1     5   8    10 
+             1     5   8    10
             / \n  / \n  \
            0   2 4   6   8.5
-                      
-                         
+
+
                     8
                  /      \
                 3        9
               /   \n    /  \
-             1     5   8.5  10 
-            / \n  / \n 
-           0   2 4   6 
-        
+             1     5   8.5  10
+            / \n  / \n
+           0   2 4   6
+
         __________________________________________________________________________________________________________________________
 
          CASE 3: if the node only have 1 child
-         
+
           --> check the child's relationship with the node
-        
+
               if the node has a parent (i.e not the root node),
-          ----> then, create a parent-child relationship between the node's parent and the child
-                with respect to the child's relationship with the node (right child/left child)
-        
+          ----> then, create a parent-child relationship
+                between the node's parent and the child
+                with respect to the child's relationship with the node
+                (right child/left child)
+
               if the node does not have a parent (i.e is a root node)
           ----> then, swap entires with the child node
          '''
@@ -375,7 +396,7 @@ class BST_Node(Generic[CT]):
               |                               |
               x                               y
              / \n     left Rotation          /  \
-            y   T3   < - - - - - - -        T1   x 
+            y   T3   < - - - - - - -        T1   x
            / \n                                 / \
           T1  T2                              T2  T3
 
@@ -417,7 +438,7 @@ class BST_Node(Generic[CT]):
               |                           |
               y                           x
              / \n     Right Rotation     /  \
-            x   T3   - - - - - - - >    T1   y 
+            x   T3   - - - - - - - >    T1   y
            / \n                             / \
           T1  T2                          T2  T3
 
@@ -450,7 +471,8 @@ class BST_Node(Generic[CT]):
     def get_root(self) -> 'BST_Node':
         '''
         used to get the root of the tree
-        an acccessory function, totally unccessary, just thought that it'd make things a lil tider
+        an acccessory function, totally unccessary,
+        just thought that it'd make things a lil tider
         '''
         node = self
         while node.parent:
