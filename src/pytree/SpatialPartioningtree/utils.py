@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import List, Optional, Tuple
 import numpy as np
 
-from .type_hints import Num, Point
+from .type_hints import Num, Point, RGB
 
 BBox = namedtuple("BBox", ["x", "y", "w", "h"], defaults=[1, 1])
 
@@ -52,20 +52,25 @@ def is_inscribed(bbox1: BBox, bbox2: BBox) -> float:
             and bbox2.y + bbox2.h >= bbox1.y + bbox1.h)
 
 
-def crop_img(img_arr: np.array, bbox: BBox) -> np.array:
+def crop_img_arr(img_arr: np.ndarray, bbox: BBox) -> np.ndarray:
     x, y, w, h = bbox
     return img_arr[y:y + h, x:x + w]
 
 
-def calculate_avg_std(
-        rgb_channel: np.ndarray) -> Tuple[Tuple[int, int, int], float]:
+def get_super_bbox(*bbox: BBox) -> BBox:
+    min_x = min(bbox, key=lambda b: b.x).x
+    min_y = min(bbox, key=lambda b: b.y).y
+    max_x = max(bbox, key=lambda b: b.x + b.w)
+    max_y = max(bbox, key=lambda b: b.y + b.h)
+    return BBox(min_x, min_y, (max_x.x + max_x.w), (max_y.y + max_y.h))
+
+
+def calculate_avg_std(rgb_channel: np.ndarray) -> Tuple[int, float]:
     rgb = np.reshape(rgb_channel, -1)
-    avg = np.mean(rgb)
-    std = np.std(rgb)
-    return int(avg), std
+    return int(np.mean(rgb)), np.std(rgb)
 
 
-def get_average_rgb(img_arr: np.ndarray) -> Tuple[Tuple[int, int, int], float]:
+def get_average_rgb(img_arr: np.ndarray) -> Tuple[RGB, float]:
     r, re = calculate_avg_std(img_arr[:, :, 0])
     g, ge = calculate_avg_std(img_arr[:, :, 1])
     b, be = calculate_avg_std(img_arr[:, :, 2])

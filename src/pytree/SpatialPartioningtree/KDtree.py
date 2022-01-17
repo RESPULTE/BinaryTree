@@ -1,5 +1,7 @@
+from typing import Any
+
 from pytree.binarytree._tree import BinaryTree
-from pytree.binarytree._type_hint import N
+from .type_hints import Num, Point
 from .kdt_node import KDT_Node
 
 
@@ -13,14 +15,8 @@ class KDTree(BinaryTree):
 
     @property
     def is_binary(self) -> bool:
-        '''
-        check whether the tree obeys the binary search tree's invariant
-        i.e:
-        - left node's value < node's value
-        - right node's value > node's value
-        '''
 
-        def traversal_check(node: N, depth: int = 0) -> bool:
+        def traversal_check(node: KDT_Node, depth: int = 0) -> bool:
             # keep going down the chain of nodes
             # until the leftmost/rightmost node has been reached
             # then, return True, as leaf nodes has no child nodes
@@ -48,11 +44,11 @@ class KDTree(BinaryTree):
         return traversal_check(self.root)
 
     def find_closest(self,
-                     target_point,
+                     target_point: Point,
                      *,
                      num: int = 1,
-                     radius: float = 0,
-                     dist: bool = False) -> 'KDT_Node':
+                     radius: Num = 0,
+                     dist: bool = False) -> KDT_Node:
         closest_nodes = self.root.find_closest_node(target_point, num)
         if dist or radius:
             point_and_dist = [(node.value, round(sqdist**0.5, 3))
@@ -61,8 +57,3 @@ class KDTree(BinaryTree):
                 return point_and_dist
             return list(filter(lambda pnd: pnd[1] <= radius, point_and_dist))
         return [node.value for _, node in closest_nodes]
-
-    def __setattr__(self, attr_name, val):
-        if attr_name == 'dimension':
-            raise ValueError('dimension of the K-D tree cannot be altered!')
-        super().__setattr__(attr_name, val)

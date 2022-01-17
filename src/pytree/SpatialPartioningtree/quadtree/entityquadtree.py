@@ -2,44 +2,9 @@ from typing import Optional, List, Dict, Tuple, Union
 
 from ..utils import BBox, is_intersecting, split_box
 from ..type_hints import UID
-from ._quadtree import QuadTree, QuadNode
 
-
-class EntityNode:
-
-    __slots__ = ["next_index", "entity_id", "owner_node"]
-
-    def __init__(self,
-                 entity_id: int = -1,
-                 next_index: int = -1,
-                 owner_node: "QuadNode" = None):
-        self.entity_id = entity_id
-        self.next_index = next_index
-        self.owner_node = owner_node
-
-    @property
-    def in_use(self):
-        return self.entity_id and self.owner_node
-
-    def update(self, **kwargs) -> None:
-        [setattr(self, k, v) for k, v in kwargs.items()]
-
-    def set_free(self, next_free_enode_index) -> None:
-        self.next_index = next_free_enode_index
-        self.entity_id = None
-        self.owner_node = None
-
-    def __str__(self):
-        return f" \
-        QuadEntityNode(next_index={self.next_index}, \
-        entity_id={self.entity_id}, \
-        owner_node={self.owner_node})"
-
-    def __repr__(self):
-        return f" \
-        QuadEntityNode(next_index={self.next_index}, \
-        entity_id={self.entity_id}, \
-        owner_node={self.owner_node})"
+from ._quadnode import QuadEntityNode, QuadNode
+from ._quadtree import QuadTree
 
 
 class EntityBasedQuadTree(QuadTree):
@@ -47,7 +12,7 @@ class EntityBasedQuadTree(QuadTree):
     def __init__(
         self,
         bbox: BBox,
-        capacity: int = 2,
+        node_capacity: int = 2,
         max_depth: int = 12,
         max_division: int = 3,
         auto_id: bool = False,
@@ -55,11 +20,13 @@ class EntityBasedQuadTree(QuadTree):
 
         super().__init__(bbox, max_depth, auto_id)
 
-        self.capacity = int(capacity)
+        self.node_capacity = int(node_capacity)
         self.max_division = int(max_division)
 
         self.all_entity: Dict[UID, object] = {}
-        self.all_entity_node: List[EntityNode] = []
+        self.all_entity_node: List[QuadEntityNode] = []
+
+        self._num_entity_node_in_use = 0
 
     @property
     def num_entity(self):
@@ -74,9 +41,9 @@ class EntityBasedQuadTree(QuadTree):
         return self._num_entity_node_in_use
 
     def set_free_entity_nodes(
-            self, indexed_entity_nodes: List[Tuple[int, EntityNode]]) -> None:
+            self, indexed_en: List[Tuple[int, QuadEntityNode]]) -> None:
 
-        for ind, en in indexed_entity_nodes:
+        for ind, en in indexed_en:
             owner_qnode = en.owner_node
             if owner_qnode.first_child == ind:
                 owner_qnode.first_child = en.next_index
@@ -101,7 +68,7 @@ class EntityBasedQuadTree(QuadTree):
         eid: Optional[UID] = None,
         bbox: Optional[BBox] = None,
         index: Optional[bool] = False,
-    ) -> Union[List[EntityNode], List[Tuple[int, EntityNode]]]:
+    ) -> Union[List[QuadEntityNode], List[Tuple[int, QuadEntityNode]]]:
         """
         find the all the entity nodes
         - that's encompassed by a quad node
@@ -144,7 +111,7 @@ class EntityBasedQuadTree(QuadTree):
         if self._free_entity_node_index == -1:
             node.first_child = len(self.all_entity_node)
             self.all_entity_node.append(
-                EntityNode(
+                QuadEntityNode(
                     entity_id=entity_id,
                     next_index=old_index,
                     owner_node=node,
@@ -232,7 +199,7 @@ class EntityBasedQuadTree(QuadTree):
                     if is_intersecting(quadrant, ebbox):
                         self.add_entity_node(current_child, eid)
 
-                if (current_child.total_entity <= self.capacity
+                if (current_child.total_entity <= self.node_capacity
                         or num_division < self.max_division):
                     continue
 
@@ -284,7 +251,7 @@ class EntityBasedQuadTree(QuadTree):
                                                      index=True):
             self.add_entity_node(qnode, entity_id)
 
-            if qnode.total_entity <= self.capacity:
+            if qnode.total_entity <= self.node_capacity:
                 continue
 
             indexed_entity_nodes = self.find_entity_node(qnode=qnode,

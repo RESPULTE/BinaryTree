@@ -1,13 +1,12 @@
 from dataclasses import dataclass, field
 from typing import Tuple, Union, List
-from pytree.binarytree.node.bst_node import BST_Node
 
 from .type_hints import Point
 from .utils import get_closest
 
 
 @dataclass
-class KDT_Node(BST_Node):
+class KDT_Node:
     '''
     The k-d tree is a binary tree in which every node is a k-dimensional point.
     Every non-leaf node can be thought of as a divider to seperate the space,

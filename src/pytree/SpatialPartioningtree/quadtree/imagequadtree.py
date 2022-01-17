@@ -1,9 +1,12 @@
-from typing import Optional, Tuple
 from PIL import Image, ImageDraw
+from typing import Optional
 import numpy as np
 
-from ..utils import BBox, split_box, crop_img, get_average_rgb
-from ._quadtree import QuadNode, QuadTree
+from ..type_hints import RGB
+from ..utils import BBox, split_box, crop_img_arr, get_average_rgb
+
+from ._quadtree import QuadTree
+from ._quadnode import QuadNode
 
 
 class ImageBasedQuadTree(QuadTree):
@@ -21,8 +24,6 @@ class ImageBasedQuadTree(QuadTree):
         self.img_arr = np.asarray(img_to_process, dtype="int32")
         self.threshold = threshold
 
-        self.compressed = False
-
         super().__init__(img_to_process.size, max_depth)
 
     def compress(self) -> Image.Image:
@@ -30,14 +31,14 @@ class ImageBasedQuadTree(QuadTree):
         def recursive_compress(qnode: QuadNode,
                                qindex: int,
                                bbox: BBox,
-                               depth: int = 0):
+                               num_division: int = 0):
 
-            img = crop_img(self.img_arr, bbox)
+            img = crop_img_arr(self.img_arr, bbox)
             avg_color, error = get_average_rgb(img)
 
             if error <= self.threshold or \
                 bbox.w <= 1 or bbox.h <= 1 \
-                    or depth > self.max_depth:
+                    or num_division > self.max_depth:
 
                 qnode.update(first_child=avg_color, total_entity=1)
                 return
@@ -47,19 +48,14 @@ class ImageBasedQuadTree(QuadTree):
             for ind, quadrant in enumerate(split_box(bbox, True)):
                 child_index = qnode.first_child + ind
                 recursive_compress(self.all_quad_node[child_index],
-                                   child_index, quadrant, depth + 1)
+                                   child_index, quadrant, num_division + 1)
 
-        if self.compressed:
+        if self.img:
             return
         recursive_compress(self.root, 0, self.bbox)
-        self.compressed = True
 
-    def draw(self,
-             outline: Optional[Tuple[int, int, int]] = None) -> Image.Image:
-        if not self.compressed:
-            raise Exception("image hasn't been compressed")
-
-        self.img = Image.new("RGB", self.img_size, (255, 255, 255))
+    def draw(self, outline: Optional[RGB] = None) -> Image.Image:
+        self.img = Image.new("RGB", self.img_size)
 
         draw = ImageDraw.Draw(self.img)
 
@@ -72,11 +68,11 @@ class ImageBasedQuadTree(QuadTree):
     def save(self,
              filename: Optional[str] = None,
              format: Optional[str] = 'png') -> None:
-        if not self.compressed:
+        if not self.img:
             raise Exception("image hasn't been compressed")
         if not filename:
             filename = self.img_name
         self.img.save(f"{filename}.{format}")
 
     def show(self):
-        self.img.show(title=self.img_name)
+        self.img.show()

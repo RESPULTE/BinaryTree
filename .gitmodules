@@ -1,0 +1,3 @@
+[submodule "src/pytree/SpatialPartioningtree/SpatialPartioningTree"]
+	path = src/pytree/SpatialPartioningtree/SpatialPartioningTree
+	url = https://github.com/RESPULTE/SpatialPartioningTree.git
