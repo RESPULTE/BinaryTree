@@ -58,21 +58,20 @@ def crop_img_arr(img_arr: np.ndarray, bbox: BBox) -> np.ndarray:
 
 
 def get_super_bbox(*bbox: BBox) -> BBox:
-    min_x = min(bbox, key=lambda b: b.x).x
-    min_y = min(bbox, key=lambda b: b.y).y
+    x = min(bbox, key=lambda b: b.x).x
+    y = min(bbox, key=lambda b: b.y).y
+
     max_x = max(bbox, key=lambda b: b.x + b.w)
+    width = (max_x.x + max_x.w) - x
     max_y = max(bbox, key=lambda b: b.y + b.h)
-    return BBox(min_x, min_y, (max_x.x + max_x.w), (max_y.y + max_y.h))
+    height = (max_y.y + max_y.h) - y
+
+    return BBox(x, y, width, height)
 
 
-def calculate_avg_std(rgb_channel: np.ndarray) -> Tuple[int, float]:
-    rgb = np.reshape(rgb_channel, -1)
-    return int(np.mean(rgb)), np.std(rgb)
+def get_area(bbox: BBox) -> float:
+    return bbox.w * bbox.h
 
 
-def get_average_rgb(img_arr: np.ndarray) -> Tuple[RGB, float]:
-    r, re = calculate_avg_std(img_arr[:, :, 0])
-    g, ge = calculate_avg_std(img_arr[:, :, 1])
-    b, be = calculate_avg_std(img_arr[:, :, 2])
-    e = re * 0.299 + 0.587 * ge + 0.114 * be
-    return (r, g, b), e
+def get_bounding_area(*bbox: BBox) -> float:
+    return get_area(get_super_bbox(bbox))

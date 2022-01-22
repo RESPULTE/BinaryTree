@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
-from typing import Generic, List
+from tkinter import N
+from typing import Generic, List, Tuple, Union
 
-from pytree.binarytree._type_hint import CT, Union, N
+from .._type_hint import CT
 
 
 @dataclass(order=True)
@@ -20,7 +21,7 @@ class BST_Node(Generic[CT]):
     right: 'BST_Node' = field(default=None, repr=False, compare=False)
 
     @property
-    def grandparent(self) -> Union['BST_Node', bool]:
+    def grandparent(self) -> Union['BST_Node', None]:
         '''get the parent of the parent of the node, if any'''
         try:
             return self.parent.parent
@@ -28,18 +29,18 @@ class BST_Node(Generic[CT]):
             return None
 
     @property
-    def uncle(self) -> Union['BST_Node', bool]:
+    def uncle(self) -> Union['BST_Node', None]:
         '''get the uncle of the parent of the node, if any'''
         try:
             return self.grandparent.right \
-                   if self.parent is self.grandparent.left \
-                   else self.grandparent.left
+                if self.parent is self.grandparent.left \
+                else self.grandparent.left
 
         except AttributeError:
             return None
 
     @property
-    def sibling(self) -> Union['BST_Node', bool]:
+    def sibling(self) -> Union['BST_Node', None]:
         '''get the sibling of the node, if any'''
         try:
             # in case the node calling this has been deleted
@@ -63,6 +64,25 @@ class BST_Node(Generic[CT]):
             depth += 1
         return depth
 
+    @property
+    def height(self) -> int:
+        '''recursively get the height of the node'''
+        def traversal_counter(node) -> int:
+            if node is None:
+                return -1
+            return 1 + max(traversal_counter(node.left),
+                           traversal_counter(node.right))
+
+        return traversal_counter(self)
+
+    @property
+    def is_leaf(self) -> bool:
+        return not self.right and not self.left
+
+    @property
+    def is_branch(self) -> bool:
+        return self.right or self.left
+
     def traverse_node(self,
                       key: str = 'in',
                       node: bool = True) -> List['BST_Node']:
@@ -75,46 +95,50 @@ class BST_Node(Generic[CT]):
         '''
 
         def inorder_traversal(node: 'BST_Node',
-                              path: list) -> List['BST_Node']:
+                              path: list,
+                              depth: int = 0) -> List[Tuple[int, 'BST_Node']]:
             if node.left:
-                inorder_traversal(node.left, path)
-            path.append(node)
+                inorder_traversal(node.left, path, depth + 1)
+            path.append((depth, node))
             if node.right:
-                inorder_traversal(node.right, path)
+                inorder_traversal(node.right, path, depth + 1)
             return path
 
-        def postorder_traversal(node: 'BST_Node',
-                                path: list) -> List['BST_Node']:
+        def postorder_traversal(
+                node: 'BST_Node',
+                path: list,
+                depth: int = 0) -> List[Tuple[int, 'BST_Node']]:
             if node.left:
-                postorder_traversal(node.left, path)
+                postorder_traversal(node.left, path, depth + 1)
             if node.right:
-                postorder_traversal(node.right, path)
-            path.append(node)
+                postorder_traversal(node.right, path, depth + 1)
+            path.append((depth, node))
             return path
 
         def preorder_traversal(node: 'BST_Node',
-                               path: list) -> List['BST_Node']:
-            path.append(node)
+                               path: list,
+                               depth: int = 0) -> List[Tuple[int, 'BST_Node']]:
+            path.append((depth, node))
             if node.left:
-                preorder_traversal(node.left, path)
+                preorder_traversal(node.left, path, depth + 1)
             if node.right:
-                preorder_traversal(node.right, path)
+                preorder_traversal(node.right, path, depth + 1)
             return path
 
         def levelorder_traversal(node: 'BST_Node',
-                                 path: list) -> List['BST_Node']:
+                                 path: list) -> List[Tuple[int, 'BST_Node']]:
             from collections import deque
 
-            stack = deque([node])
+            stack = deque([(node, 0)])
 
             while stack != deque([]):
-                node = stack.popleft()
-                path.append(node)
+                node, depth = stack.popleft()
+                path.append((depth, node))
 
                 if node.left:
-                    stack.append(node.left)
+                    stack.append((node.left, depth + 1))
                 if node.right:
-                    stack.append(node.right)
+                    stack.append((node.right, depth + 1))
 
             return path
 
@@ -132,7 +156,7 @@ class BST_Node(Generic[CT]):
         if node:
             return all_nodes
 
-        return [node.value for node in all_nodes]
+        return [node[1].value for node in all_nodes]
 
     def insert_node(self, value: CT) -> None:
         '''insert a value into the binary tree'''
@@ -141,7 +165,7 @@ class BST_Node(Generic[CT]):
     def _insert_node(self, value: CT) -> Union[None, 'BST_Node']:
         '''internal function of the binary tree where the recursions happen'''
         if value == self.value:
-            return self
+            return None
 
         if value < self.value:
             if self.left is None:
@@ -159,21 +183,22 @@ class BST_Node(Generic[CT]):
 
     def find_node(self, value: CT) -> Union[None, 'BST_Node']:
         '''search for the given value in the binary tree'''
-        if self.value == value:
+        if self.value is None:
+            return None
+        elif self.value == value:
             return self
-        if value < self.value and self.left:
+        if self.left and value < self.value:
             return self.left.find_node(value)
-        elif value > self.value and self.right:
+        elif self.right and value > self.value:
             return self.right.find_node(value)
-        return None
 
-    def find_gt_node(self, value: CT) -> Union[N, CT]:
+    def find_gt_node(self, value: CT) -> Union['BST_Node', None]:
         '''
         find the node with the closest value
         that's less than or equal to the given value
         '''
         if value < self.value:
-            if self.left and value < self.left.value:
+            if self.left and value <= self.left.value:
                 return self.left.find_gt_node(value)
             else:
                 return self
@@ -182,13 +207,13 @@ class BST_Node(Generic[CT]):
                 return self.right.find_gt_node(value)
             return None
 
-    def find_lt_node(self, value: CT) -> Union[N, CT]:
+    def find_lt_node(self, value: CT) -> Union['BST_Node', None]:
         '''
         find the node with the closest value
         that's less than or equal to the given value
         '''
         if value > self.value:
-            if self.right and value > self.right.value:
+            if self.right and value >= self.right.value:
                 return self.right.find_lt_node(value)
             else:
                 return self
@@ -197,7 +222,7 @@ class BST_Node(Generic[CT]):
                 return self.left.find_lt_node(value)
             return None
 
-    def find_le_node(self, value: CT) -> Union[N, CT]:
+    def find_le_node(self, value: CT) -> Union['BST_Node', None]:
         '''
         find the node with the closest value
         that's less than or equal to the given value
@@ -217,7 +242,7 @@ class BST_Node(Generic[CT]):
         else:
             return self.right.find_lt_node(value)
 
-    def find_ge_node(self, value: CT) -> Union[N, CT]:
+    def find_ge_node(self, value: CT) -> Union['BST_Node', None]:
         '''find the node with the closest value that's >= the given value'''
 
         # if the leaf node has been reached, but the value is still bigger
@@ -226,8 +251,7 @@ class BST_Node(Generic[CT]):
             return None
 
         # if the node's value is greater or equal to the given value
-        if self.value >= value and (self.left is None
-                                    or self.left.value < value):
+        if self.value >= value and (self.left is None or self.left.value < value):
             return self
 
         if self.value <= value:
@@ -342,10 +366,14 @@ class BST_Node(Generic[CT]):
 
         # CASE 1: node have 0 child
         if self.left is None and self.right is None:
-            if self.parent.left == self:
-                self.parent.left = None
+            if self.parent:
+                if self.parent.left == self:
+                    self.parent.left = None
+                else:
+                    self.parent.right = None
             else:
-                self.parent.right = None
+                self.value = None
+
             return self
 
         # CASE 2: node have 2 child

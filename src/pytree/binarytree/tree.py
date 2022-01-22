@@ -1,4 +1,3 @@
-from typing import Tuple
 from .node import RBT_Node, AVL_Node, Splay_Node, BST_Node
 from ._tree import BinaryTree
 
@@ -24,48 +23,6 @@ class RBTree(BinaryTree):
 
     def __init__(self):
         super().__init__()
-
-    @property
-    def isredblack(self) -> bool:
-
-        def traversal_check(node) -> Tuple[bool, int]:
-            # keep going down the chain of nodes
-            # until the leftmost/rightmost node has been reached
-            # then, return True, as leaf nodes has no child nodes
-            # and are inherently colour-balanced
-            # and the 'black_height' of the node,
-            # which can be anything really,
-            # as it doesnt affect the overall result
-            if node is None:
-                return (True, 0)
-
-            left_check = traversal_check(node.left)
-            right_check = traversal_check(node.right)
-
-            # check whether the left & right node is colour-balanced
-            # i.e the number of black nodes in the left subtree
-            #     is the same as the right sub-tree
-            colour_check = (left_check[1]
-                            == right_check[1]) and (left_check[0]
-                                                    and right_check[0])
-            # check whether the nodes obey the red-black invariants
-            # i.e a red child cannot have a red parent
-            if node.parent and node.parent.is_red and node.is_red:
-                colour_check = False
-
-            # get the max height among left and right black heights
-            # to get the 'problematic' subtree since both should be the same
-            # if things are done properly
-            total_black_nodes = max(right_check[1], left_check[1])
-
-            # print(node.value, left_check, right_check)
-            # add 1 if the current node that;s being looked at is black
-            if not node.is_red:
-                total_black_nodes += 1
-
-            return (colour_check, total_black_nodes)
-
-        return traversal_check(self.root)[0]
 
 
 class BSTree(BinaryTree):
@@ -130,14 +87,14 @@ class SplayTree(BinaryTree):
         -> if the node that is search is invalid,
             get the closest node available in the tree and splay that node
         '''
-        attribute = super().__getattribute__(attr_name)
+        attr = super().__getattribute__(attr_name)
 
-        if not ('find' in attr_name and callable(attribute)):
-            return attribute
+        if 'find' not in attr_name or not callable(attr) or self.root.value is None:
+            return attr
 
         def node_splayer(*args, **kwargs):
             # set the node to True to get the node for the splaying process
-            found_node = attribute(*args, node=True)
+            found_node = attr(*args, node=True)
 
             # splaying process
             if found_node:
@@ -152,11 +109,3 @@ class SplayTree(BinaryTree):
             return found_node
 
         return node_splayer
-
-
-class WAVL(BinaryTree):
-    ...
-
-
-class Treap(BinaryTree):
-    ...

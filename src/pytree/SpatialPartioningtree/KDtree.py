@@ -1,8 +1,7 @@
-from typing import Any
-
-from pytree.binarytree._tree import BinaryTree
 from .type_hints import Num, Point
 from .kdt_node import KDT_Node
+
+from ..binarytree._tree import BinaryTree
 
 
 class KDTree(BinaryTree):

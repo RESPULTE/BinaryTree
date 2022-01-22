@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
-from pytree.binarytree._type_hint import CT, Union
+from typing import Union
+
+from .._type_hint import CT
 from .bst_node import BST_Node
 
 
-@dataclass
+@dataclass(order=True)
 class RBT_Node(BST_Node):
     '''
     node for the RBT class (Red-Black Tree)
@@ -29,6 +31,10 @@ class RBT_Node(BST_Node):
 
     is_red: bool = field(default=True, compare=False)
 
+    @property
+    def is_black(self) -> bool:
+        return not self.is_red
+
     def get_red_child(self) -> Union['RBT_Node', None]:
         '''
         returns a red child, if any, of the specific node
@@ -43,7 +49,7 @@ class RBT_Node(BST_Node):
             red_children.append(self.right)
         return red_children
 
-    def insert_node(self, value: CT) -> Union['RBT_Node', None]:
+    def insert_node(self, value: CT) -> None:
         '''add a node with the given value into the tree'''
         if self.parent is None:
             self.is_red = False
@@ -51,15 +57,7 @@ class RBT_Node(BST_Node):
         new_node = self._insert_node(value)
 
         if new_node:
-            # only update the node
-            # -> if a new node has been inserted into the binary tree
-            # the '_insert_node' function will return None
-            # -> if the value already exists in the binary tree
             new_node._update_insert()
-
-            root = self.get_root()
-            root.is_red = False
-            return root
 
     def _update_insert(self) -> None:
         '''
@@ -74,10 +72,10 @@ class RBT_Node(BST_Node):
             - if the relationship forms a {<} or {>} shape:
                ~> rotate the node to move it upwards
 
-                            |  [will continue with the process below]
+                            |  [continue with the process below]
                             v
 
-            - if the relationship forms a {/} or {\n} shape:
+            - if the relationship forms a {/} or {\} shape: # noqa
                ~> rotate the node in the middle to move it upwards
                ~> color the new 'top' node black
                ~> color both of the child nodes of the 'top' node red
@@ -108,8 +106,8 @@ class RBT_Node(BST_Node):
             5(*)               5(*)
 
         '''
-        if not self.parent or not self.parent.is_red:
-            return None
+        if not self.parent or self.parent.is_black:
+            return
 
         # CASE 2
         if self.uncle and self.uncle.is_red:
@@ -126,24 +124,24 @@ class RBT_Node(BST_Node):
             parent_node = self.parent
 
             # ROTATION PHASE
-            if parent_node == grandparent_node.left:
-                if parent_node.right == self:
+            if parent_node is grandparent_node.left:
+                if parent_node.right is self:
                     parent_node._rotate_left()
                 grandparent_node._rotate_right()
 
-            elif parent_node == grandparent_node.right:
-                if parent_node.left == self:
+            elif parent_node is grandparent_node.right:
+                if parent_node.left is self:
                     parent_node._rotate_right()
                 grandparent_node._rotate_left()
 
             # RE-COLORING PHASE
-            self.is_red = False if grandparent_node.parent == self else True
+            self.is_red = grandparent_node.parent is not self
             parent_node.is_red = not self.is_red
             grandparent_node.is_red = True
 
-    def delete_node(self, node_to_delete: 'RBT_Node') -> 'RBT_Node':
+    def delete_node(self, node_to_delete: 'RBT_Node') -> None:
         '''remove the node that contains the specified value from the tree'''
-        deleted_node = node_to_delete._delete_node()
+        deleted_node: 'RBT_Node' = node_to_delete._delete_node()
 
         # check if the deleted node has any red child
         # if not, the node is considered as a 'double black node' when deleted
@@ -151,10 +149,6 @@ class RBT_Node(BST_Node):
         double_black = deleted_node.get_red_child() == []
 
         deleted_node._update_delete(double_black)
-
-        root = self.get_root()
-        root.is_red = False
-        return root
 
     def _update_delete(self, double_black: bool) -> None:
         '''
@@ -247,19 +241,18 @@ consider the following example:
         if not self.sibling.is_red:
 
             red_children = self.sibling.get_red_child()
+            num_red_child = len(red_children)
 
             # CASE 1: sibling has red children
             if red_children:
 
                 # ROTATION PHASE
                 if self.parent.right == self.sibling:
-                    if self.sibling.left in red_children and len(
-                            red_children) == 1:
+                    if self.sibling.left in red_children and num_red_child == 1:
                         self.sibling._rotate_right()
                     self.parent._rotate_left()
                 else:
-                    if self.sibling.right in red_children and len(
-                            red_children) == 1:
+                    if self.sibling.right in red_children and num_red_child == 1:
                         self.sibling._rotate_left()
                     self.parent._rotate_right()
 

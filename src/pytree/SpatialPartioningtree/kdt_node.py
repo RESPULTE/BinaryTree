@@ -45,14 +45,14 @@ class KDT_Node:
 
     def _delete_node(self, node_dimension: int) -> None:
         if self.right:
-            right_subtree_min = self.right.find_min_node(
+            right_subtree_min: 'KDT_Node' = self.right.find_min_node(
                 dimension=node_dimension, depth=node_dimension + 1)
             self.value = right_subtree_min.value
             right_subtree_min._delete_node(right_subtree_min.depth %
                                            self.dimension)
 
         elif self.left:
-            left_subtree_min = self.left.find_min_node(
+            left_subtree_min: 'KDT_Node' = self.left.find_min_node(
                 dimension=node_dimension, depth=node_dimension + 1)
             self.value = left_subtree_min.value
             left_subtree_min._delete_node(left_subtree_min.depth %

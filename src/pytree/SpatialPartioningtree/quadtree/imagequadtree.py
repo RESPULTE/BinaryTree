@@ -1,12 +1,20 @@
 from PIL import Image, ImageDraw
-from typing import Optional
+from typing import Optional, Tuple
 import numpy as np
 
 from ..type_hints import RGB
-from ..utils import BBox, split_box, crop_img_arr, get_average_rgb
+from ..utils import BBox, split_box, crop_img_arr
 
 from ._quadtree import QuadTree
 from ._quadnode import QuadNode
+
+
+def get_average_rgb(img_arr: np.ndarray) -> Tuple[RGB, float]:
+    r, g, b = [int(num) for num in np.mean(img_arr, axis=(0, 1))]
+    re, ge, be = np.std(img_arr, axis=(0, 1))
+    e = 0.299 * re + 0.587 * ge + 0.114 * be
+
+    return (r, g, b), e
 
 
 class ImageBasedQuadTree(QuadTree):

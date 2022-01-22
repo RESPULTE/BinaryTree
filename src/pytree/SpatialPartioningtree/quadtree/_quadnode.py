@@ -28,7 +28,7 @@ class QuadNode:
         return self.parent_index != None and self.total_entity != None  # noqa
 
     def update(self, **kwargs) -> None:
-        self.__dict__.update(kwargs)
+        [setattr(self, k, v) for k, v in kwargs.items()]
 
     def set_free(self, next_free_qnode_index: int) -> None:
         self.first_child = next_free_qnode_index
@@ -65,7 +65,7 @@ class QuadEntityNode:
         return self.entity_id and self.owner_node
 
     def update(self, **kwargs) -> None:
-        self.__dict__.update(kwargs)
+        [setattr(self, k, v) for k, v in kwargs.items()]
 
     def set_free(self, next_free_enode_index: int) -> None:
         self.next_index = next_free_enode_index

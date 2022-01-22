@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
-from pytree.binarytree._type_hint import CT, Union
+
+from .._type_hint import CT
 from .bst_node import BST_Node
 
 
-@dataclass
+@dataclass(order=True)
 class AVL_Node(BST_Node):
     '''
     The node class for the AVL tree
@@ -16,30 +17,21 @@ class AVL_Node(BST_Node):
 
         ii. node without any child node will have a height of -1
 
-
     '''
 
     height: int = field(default=0, compare=False)
     b_factor: int = field(default=0, compare=False)
 
-    def insert_node(self, value: CT) -> Union['AVL_Node', None]:
+    def insert_node(self, value: CT) -> None:
         new_node = self._insert_node(value)
         if new_node:
             # only update the node if a new node has been inserted
             # the '_insert_node' will return None if the value already exists
-            return new_node._update_node()
+            new_node._update_node()
 
-    def delete_node(self,
-                    node_to_delete: 'AVL_Node') -> Union['AVL_Node', None]:
+    def delete_node(self, node_to_delete: 'AVL_Node') -> None:
         deleted_node = node_to_delete._delete_node()
-
-        # using the parent of the node that has been 'deleted' to do the update
-        # because the node isn't actually deleted, it either
-        # - had its relationship with its parent cut off -> can't be accessed
-        # - had its value overwritten by a child node
-        new_root = deleted_node._update_node()
-
-        return new_root
+        deleted_node._update_node()
 
     def _update_node(self) -> 'AVL_Node':
         '''
@@ -57,9 +49,7 @@ class AVL_Node(BST_Node):
         # keep going until the root node is reached
         # then, just return the node for caching in the <Tree> class
         if self.parent:
-            return self.parent._update_node()
-
-        return self
+            self.parent._update_node()
 
     def _rebalance(self) -> None:
         '''
@@ -87,6 +77,7 @@ class AVL_Node(BST_Node):
         # UPDATING PHASE
         if self.grandparent:
             self.grandparent._update_node_status()
+
         self.parent._update_node_status()
         self.parent.right._update_node_status()
         self.parent.left._update_node_status()

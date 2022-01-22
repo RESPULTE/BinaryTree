@@ -75,9 +75,6 @@ class QuadTree:
 
         return quadtree
 
-    def insert(self) -> None:
-        raise NotImplementedError
-
     def get_bbox(self,
                  qnode: QuadNode,
                  index: Optional[bool] = False) -> Tuple[int, BBox]:
