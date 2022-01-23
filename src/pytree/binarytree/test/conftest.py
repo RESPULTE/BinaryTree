@@ -47,9 +47,14 @@ def num_gen() -> List[int]:
     return list(set([random.randint(0, 1000) for _ in range(100)]))
 
 
-@pytest.fixture(params=[BSTree, AVLTree, RBTree, SplayTree])
-def tree(request: BinaryTree) -> BinaryTree:
-    return request.param()
+@pytest.fixture(params=[AVLTree, BSTree, RBTree, SplayTree])
+def tree_obj(request) -> BinaryTree:
+    return request.param
+
+
+@pytest.fixture
+def tree(tree_obj: BinaryTree) -> BinaryTree:
+    return tree_obj()
 
 
 @pytest.fixture(params=[BSTree, AVLTree, RBTree, SplayTree])

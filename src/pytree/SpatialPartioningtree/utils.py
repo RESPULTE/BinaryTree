@@ -24,8 +24,10 @@ def get_closest(this_point: Point, that_point: Point,
 
 
 def is_intersecting(bbox1: BBox, bbox2: BBox) -> bool:
-    return (bbox1.x < bbox2.x + bbox2.w and bbox1.x + bbox1.w > bbox2.x
-            and bbox1.y < bbox2.y + bbox2.h and bbox1.y + bbox1.h > bbox2.y)
+    return (bbox1.x < bbox2.x + bbox2.w and
+            bbox1.x + bbox1.w > bbox2.x and
+            bbox1.y < bbox2.y + bbox2.h and
+            bbox1.y + bbox1.h > bbox2.y)
 
 
 def split_box(bbox: BBox, whole_num: Optional[bool] = False) -> List[BBox]:
@@ -46,10 +48,11 @@ def split_box(bbox: BBox, whole_num: Optional[bool] = False) -> List[BBox]:
     ]
 
 
-def is_inscribed(bbox1: BBox, bbox2: BBox) -> float:
-    return (bbox2.x <= bbox1.x and bbox2.y <= bbox1.y
-            and bbox2.x + bbox2.w >= bbox1.x + bbox1.w
-            and bbox2.y + bbox2.h >= bbox1.y + bbox1.h)
+def is_inscribed(bbox1: BBox, tbbox2: BBox) -> float:
+    return (tbbox2.x <= bbox1.x and
+            tbbox2.y <= bbox1.y and
+            tbbox2.x + tbbox2.w >= bbox1.x + bbox1.w and
+            tbbox2.y + tbbox2.h >= bbox1.y + bbox1.h)
 
 
 def crop_img_arr(img_arr: np.ndarray, bbox: BBox) -> np.ndarray:
@@ -74,4 +77,4 @@ def get_area(bbox: BBox) -> float:
 
 
 def get_bounding_area(*bbox: BBox) -> float:
-    return get_area(get_super_bbox(bbox))
+    return get_area(get_super_bbox(*bbox))

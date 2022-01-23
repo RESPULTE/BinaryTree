@@ -4,11 +4,6 @@ import pytest
 from pytree import BinaryTree, AVLTree, BSTree, RBTree, SplayTree
 
 
-@pytest.fixture(params=[AVLTree, BSTree, RBTree, SplayTree])
-def tree_obj(request):
-    return request.param
-
-
 @pytest.mark.parametrize('data_gen, tree', [
     ('num_gen', BSTree),
     ('num_gen', AVLTree),

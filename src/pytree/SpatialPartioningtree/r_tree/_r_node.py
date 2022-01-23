@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Tuple
 
 from ..utils import BBox, get_super_bbox
 from ..type_hints import UID
@@ -8,7 +8,7 @@ def get_sibling(
         node: Union['R_Node',
                     'R_Entity']) -> List[Union['R_Node', 'R_Entity']]:
     siblings = []
-    while node.sibling_node:
+    while node:
         siblings.append(node)
         node = node.sibling_node
 
@@ -39,15 +39,16 @@ class R_Node:
         self.bbox = bbox
 
     @property
+    def area(self) -> float:
+        return self.bbox.w * self.bbox.h
+
+    @property
     def is_leaf(self) -> bool:
-        return not isinstance(self.child_node, type(self)) or (
-            self.child_node is None and self.total_child != -1)
+        return not isinstance(self.child_node, type(self))
 
     @property
     def is_branch(self) -> bool:
-        return isinstance(self.child_node,
-                          type(self)) or (self.child_node
-                                          and self.total_child != -1)
+        return isinstance(self.child_node, type(self))
 
     @property
     def is_root(self) -> bool:
@@ -55,11 +56,12 @@ class R_Node:
 
     @property
     def last_child(self) -> Union['R_Entity', 'R_Node']:
-        return [c for c in get_children(self) if c.sibling_node is None][0]
+        if self.child_node is None:
+            return None
+        return get_children(self)[-1]
 
     def resize(self, *bbox: BBox) -> None:
-        self.bbox = get_super_bbox(
-            *bbox, self.bbox) if self.bbox else get_super_bbox(*bbox)
+        self.bbox = get_super_bbox(*bbox, self.bbox) if self.bbox else get_super_bbox(*bbox)
 
     def update(self, **kwargs) -> None:
         [setattr(self, k, v) for k, v in kwargs.items()]
@@ -71,23 +73,8 @@ class R_Node:
         self.parent_node = None
         self.bbox = None
 
-    def __str__(self) -> str:
-        return f" \
-            {type(self).__name__}( \
-                child_node={self.child_node}, \
-                sibling_node={self.sibling_node}, \
-                parent_node={self.parent_node}, \
-                bbox={self.bbox} \
-            )"
-
-    def __repr__(self) -> str:
-        return f" \
-            {type(self).__name__}( \
-                child_node={self.child_node}, \
-                sibling_node={self.sibling_node}, \
-                parent_node={self.parent_node}, \
-                bbox={self.bbox} \
-            )"
+    def __str__(self):
+        return f"{type(self).__name__}(bbox={self.bbox}, total_child={self.total_child})"
 
 
 class R_Entity:
@@ -105,6 +92,10 @@ class R_Entity:
         self.sibling_node = sibling_node
         self.parent_node = parent_node
 
+    @property
+    def area(self) -> float:
+        return self.bbox.w * self.bbox.h
+
     def update(self, **kwargs) -> None:
         [setattr(self, k, v) for k, v in kwargs.items()]
 
@@ -115,15 +106,4 @@ class R_Entity:
         self.parent_node = None
 
     def __str__(self):
-        return f" \
-        R_Entity(sibling_node={self.sibling_node}, \
-        uid={self.uid}, \
-        bbox={self.bbox}, \
-        parent_node={self.parent_node})"
-
-    def __repr__(self):
-        return f" \
-        R_Entity(sibling_node={self.sibling_node}, \
-        uid={self.uid}, \
-        bbox={self.bbox}, \
-        parent_node={self.parent_node})"
+        return f"{type(self).__name__}(bbox={self.bbox}, uid={self.uid})"
