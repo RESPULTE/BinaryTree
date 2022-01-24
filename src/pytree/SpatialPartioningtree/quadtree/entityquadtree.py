@@ -1,6 +1,6 @@
-from typing import Optional, List, Dict, Tuple, Union
+from typing import Optional, List, Dict, Set, Tuple, Union
 
-from ..utils import BBox, is_intersecting, split_box
+from ..utils import BBox, get_area, is_intersecting, split_box, is_inscribed
 from ..type_hints import UID
 
 from ._quadnode import QuadEntityNode, QuadNode
@@ -20,12 +20,18 @@ class EntityBasedQuadTree(QuadTree):
 
         super().__init__(bbox, max_depth, auto_id)
 
+        if get_area(self.bbox) < 0:
+            raise ValueError("main bounding box must have a non-zero/negative area")
+        if node_capacity < 1:
+            raise ValueError("node capacity must be greater than 0")
+
         self.node_capacity = int(node_capacity)
         self.max_division = int(max_division)
 
         self.all_entity: Dict[UID, object] = {}
         self.all_entity_node: List[QuadEntityNode] = []
 
+        self._free_entity_node_index = -1
         self._num_entity_node_in_use = 0
 
     @property
@@ -49,11 +55,10 @@ class EntityBasedQuadTree(QuadTree):
                 owner_qnode.first_child = en.next_index
 
             else:
-                prev_en_node = next(
-                    filter(
-                        lambda en: en.next_index == ind,
-                        self.find_entity_node(qnode=owner_qnode),
-                    ))
+                prev_en_node = next(filter(
+                    lambda en: en.next_index == ind,
+                    self.find_entity_node(qnode=owner_qnode)
+                ))
                 prev_en_node.next_index = en.next_index
 
             en.set_free(self._free_entity_node_index)
@@ -76,7 +81,11 @@ class EntityBasedQuadTree(QuadTree):
         - holds a given entity_id
         returns a list of the entity nodes and their index (optional)
         """
-        conditions = (qnode, eid, bbox)
+        conditions = (
+            qnode is not None,
+            bbox is not None,
+            eid is not None
+        )
         if not any(conditions):
             raise ValueError(
                 "at least one or the other is required, 'qnode' or 'eid'")
@@ -84,7 +93,7 @@ class EntityBasedQuadTree(QuadTree):
             raise ValueError(
                 "only one or the other is allowed, 'qnode' or 'eid'")
 
-        ebbox = self.all_entity[eid] if eid else bbox
+        ebbox = self.all_entity[eid] if eid is not None else bbox
         qnode = self.find_quad_node(bbox=ebbox)[0] if not qnode else qnode
 
         entity_nodes = []
@@ -156,9 +165,9 @@ class EntityBasedQuadTree(QuadTree):
     def query(
         self,
         bbox: Optional[BBox] = None,
-    ) -> List[Dict[UID, UID]]:
+    ) -> Dict[UID, Set[UID]]:
 
-        intersecting_entities = {}
+        intersecting_entities: Dict[UID, Set[UID]] = {}
 
         bbox = self.bbox if not bbox else BBox(*bbox)
 
@@ -200,7 +209,7 @@ class EntityBasedQuadTree(QuadTree):
                         self.add_entity_node(current_child, eid)
 
                 if (current_child.total_entity <= self.node_capacity
-                        or num_division < self.max_division):
+                        or num_division < self.max_division):  # noqa
                     continue
 
                 indexed_entity_nodes = self.find_entity_node(current_child,
@@ -219,21 +228,25 @@ class EntityBasedQuadTree(QuadTree):
                 )
 
         if not all(isinstance(num, (int, float)) for num in entity_bbox):
-            raise ValueError(
-                "bounding box of entity must be a tuple of 4 numbers ")
+            raise ValueError("bounding box of entity must be a tuple of 4 numbers ")
 
         if isinstance(entity_id, type(None)) and not self.auto_id:
-            raise ValueError("set QuadTree's auto_id to True or \
-                 provide ids for the entity")
+            raise ValueError("set QuadTree's auto_id to True or provide ids for the entity")
 
-        if self.depth > self.max_depth:
-            raise ValueError(
-                f"Quadtree's depth has exceeded the maximum depth of {self.max_depth}\n \
-                  current quadtree's depth: {self.depth}")
+        # if self.depth > self.max_depth:
+        #     raise ValueError(
+        #         f"Quadtree's depth has exceeded the maximum depth of {self.max_depth}\n \
+        #           current quadtree's depth: {self.depth}")
 
         if not self.cleaned:
             self.clean_up()
             self.cleaned = True
+
+        if not isinstance(entity_bbox, BBox):
+            entity_bbox = BBox(*entity_bbox)
+
+        if not is_inscribed(entity_bbox, self.bbox):
+            raise ValueError("entity's bbox is out of bound!")
 
         if isinstance(entity_id, type(None)):
             int_id = filter(lambda id: isinstance(id, (int, float)),
@@ -241,9 +254,6 @@ class EntityBasedQuadTree(QuadTree):
             if not int_id:
                 int_id.append(0)
             entity_id = max(int_id) + 1 if self.all_entity else 0
-
-        if not isinstance(entity_bbox, BBox):
-            entity_bbox = BBox(*entity_bbox)
 
         self.all_entity[entity_id] = entity_bbox
 

@@ -1,8 +1,7 @@
 from typing import Generic, Union, Tuple, List
-from types import MethodType
-from typing_extensions import Self
 
-from ._type_hint import CT, BN
+from ._type_hint import CT, BSN
+from .node import BST_Node
 
 
 class BinaryTree(Generic[CT]):
@@ -14,13 +13,13 @@ class BinaryTree(Generic[CT]):
     all binary search tree variations should inherit this class
     to obtain all the necessary interface functions
     '''
-    _node_type: BN = None
+    _node_type: BSN = None
 
     def __init__(self):
         if self._node_type is None:
             raise TypeError("Cannot instantiate base class.")
 
-        self.root = self._node_type()
+        self.root: BST_Node = self._node_type()
         self._size = 0
 
     @property
@@ -41,7 +40,7 @@ class BinaryTree(Generic[CT]):
         -> i.e all nodes of the tree either has 2 child or no child
         '''
 
-        def traversal_check(node) -> bool:
+        def traversal_check(node: BSN) -> bool:
             # keep going down the chain of nodes
             # until the leftmost/rightmost node has been reached
             # then, return True, as leaf nodes has no child nodes
@@ -67,7 +66,7 @@ class BinaryTree(Generic[CT]):
         -> i.e each branch of the tree has the same height
         '''
 
-        def traversal_check(node) -> Tuple[bool, int]:
+        def traversal_check(node: BSN) -> Tuple[bool, int]:
             # keep going down the chain of nodes
             # until the leftmost/rightmost node has been reached
             # return True, as leaf nodes has 0 child and are balanced
@@ -174,9 +173,7 @@ class BinaryTree(Generic[CT]):
         self.root.value = None
         self._size = 0
 
-    def traverse(self,
-                 key: str = 'in',
-                 node: bool = False) -> List[Union[BN, CT]]:
+    def traverse(self, key: str = 'in', node: bool = False) -> List[Union[BSN, CT]]:
         '''
         returns list of all the items in the tree in the given order type
         in-order  ['in']: from min-to-max
@@ -188,7 +185,7 @@ class BinaryTree(Generic[CT]):
             return []
         return self.root.traverse_node(key, node)
 
-    def find(self, value: CT, node: bool = False) -> Union[BN, CT]:
+    def find(self, value: CT, node: bool = False) -> Union[BSN, CT]:
         '''get the node with the given value'''
         if self.root.value is None:
             return None
@@ -201,7 +198,7 @@ class BinaryTree(Generic[CT]):
     def find_lt(self,
                 value: CT,
                 node: bool = False,
-                **kwargs) -> Union[BN, CT]:
+                **kwargs) -> Union[BSN, CT]:
         '''get the node with the given value'''
         if self.root.value is None:
             return None
@@ -214,7 +211,7 @@ class BinaryTree(Generic[CT]):
     def find_gt(self,
                 value: CT,
                 node: bool = False,
-                **kwargs) -> Union[BN, CT]:
+                **kwargs) -> Union[BSN, CT]:
         '''find the node with the closest value that's > the given value'''
         if self.root.value is None:
             return None
@@ -227,7 +224,7 @@ class BinaryTree(Generic[CT]):
     def find_le(self,
                 value: CT,
                 node: bool = False,
-                **kwargs) -> Union[BN, CT]:
+                **kwargs) -> Union[BSN, CT]:
         '''get the node with the given value'''
         if self.root.value is None:
             return None
@@ -237,10 +234,7 @@ class BinaryTree(Generic[CT]):
         if target_node:
             return target_node.value if not node else target_node
 
-    def find_ge(self,
-                value: CT,
-                node: bool = False,
-                **kwargs) -> Union[BN, CT]:
+    def find_ge(self, value: CT, node: bool = False, **kwargs) -> Union[BSN, CT]:
         '''find the node with the closest value that's < the given value'''
         if self.root.value is None:
             return None
@@ -250,13 +244,13 @@ class BinaryTree(Generic[CT]):
         if target_node:
             return target_node.value if not node else target_node
 
-    def find_max(self, node: bool = False, **kwargs) -> Union[BN, CT]:
+    def find_max(self, node: bool = False, **kwargs) -> Union[BSN, CT]:
         '''get the node with the maximum value in the tree'''
         target_node = self.root.find_max_node(**kwargs)
         if target_node:
             return target_node.value if not node else target_node
 
-    def find_min(self, node: bool = False, **kwargs) -> Union[BN, CT]:
+    def find_min(self, node: bool = False, **kwargs) -> Union[BSN, CT]:
         '''get the node with the minimum value in the tree'''
         target_node = self.root.find_min_node(**kwargs)
         if target_node:

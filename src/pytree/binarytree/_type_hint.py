@@ -1,62 +1,97 @@
-from typing import Any, Protocol, TypeVar
+from typing import Protocol, Union, TypeVar
 
 
 class ComparableType(Protocol):
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: 'ComparableType') -> bool:
         ...
 
-    def __le__(self, other: Any) -> bool:
+    def __le__(self, other: 'ComparableType') -> bool:
         ...
 
-    def __gt__(self, other: Any) -> bool:
+    def __gt__(self, other: 'ComparableType') -> bool:
         ...
 
-    def __ge__(self, other: Any) -> bool:
+    def __ge__(self, other: 'ComparableType') -> bool:
         ...
 
 
 CT = TypeVar('CT', bound=ComparableType)
 
 
-class BinaryNode(Protocol):
+class BinarySearchNode(Protocol):
 
-    value: Any
-    left: 'BinaryNode'
-    right: 'BinaryNode'
-    parent: 'BinaryNode'
+    value: CT
+    left: 'BinarySearchNode'
+    right: 'BinarySearchNode'
+    parent: 'BinarySearchNode'
 
-    def insert_node(self, value):
-        ...
+    @property
+    def grandparent(self) -> Union['BinarySearchNode', None]:
+        pass
 
-    def delete_node(self, value):
-        ...
+    @property
+    def uncle(self) -> Union['BinarySearchNode', None]:
+        pass
 
-    def traverse_node(self, key):
-        ...
+    @property
+    def sibling(self) -> Union['BinarySearchNode', None]:
+        pass
 
-    def find_node(self, value):
-        ...
+    @property
+    def depth(self) -> int:
+        pass
+
+    @property
+    def height(self) -> int:
+        pass
+
+    @property
+    def is_leaf(self) -> bool:
+        pass
+
+    @property
+    def is_branch(self) -> bool:
+        pass
+
+    def insert_node(self, value: CT) -> None:
+        pass
+
+    def _insert_node(self, value: CT) -> Union[None, 'BinarySearchNode']:
+        pass
+
+    def find_node(self, value: CT) -> Union[None, 'BinarySearchNode']:
+        pass
+
+    def find_gt_node(self, value: CT) -> Union['BinarySearchNode', None]:
+        pass
+
+    def find_lt_node(self, value: CT) -> Union['BinarySearchNode', None]:
+        pass
+
+    def find_le_node(self, value: CT) -> Union['BinarySearchNode', None]:
+        pass
+
+    def find_ge_node(self, value: CT) -> Union['BinarySearchNode', None]:
+        pass
+
+    def find_min_node(self) -> 'BinarySearchNode':
+        pass
+
+    def find_max_node(self) -> 'BinarySearchNode':
+        pass
+
+    def delete_node(self, node_to_delete: 'BinarySearchNode') -> None:
+        pass
+
+    def _delete_node(self) -> 'BinarySearchNode':
+        pass
+
+    def _rotate_left(self) -> None:
+        pass
+
+    def _rotate_right(self) -> None:
+        pass
 
 
-BN = TypeVar('BN', bound=BinaryNode)
-
-
-class Tree(Protocol):
-
-    _node_type: BN
-
-    def insert(self, value):
-        ...
-
-    def delete(self, value):
-        ...
-
-    def traverse(self, key):
-        ...
-
-    def find(self, value):
-        ...
-
-
-Tree = TypeVar('BST', bound=Tree)
+BSN = TypeVar('BSN', bound=BinarySearchNode)

@@ -34,33 +34,30 @@ class QuadTree:
     def num_quad_node_in_use(self):
         return self._num_quad_node_in_use
 
-    @property
-    def height(self) -> int:
-        '''recursively get the height of the tree '''
+    # @property
+    # def depth(self) -> int:
+    #     '''recursively get the height of the tree '''
 
-        def traversal_counter(qnode_index) -> int:
-            first_child = self.all_quad_node[qnode_index].first_child
-            return 1 + max([
-                traversal_counter(first_child + i) for i in range(4)
-                if isinstance(first_child, int) and first_child != -1
-            ],
-                           default=0)
-
-        return traversal_counter(0)
+    #     def traversal_counter(qnode_index) -> int:
+    #         first_child = self.all_quad_node[qnode_index].first_child
+    #         return 1 + max([
+    #             traversal_counter(first_child + i) for i in range(4)
+    #             if isinstance(first_child, int) and first_child != -1], default=0)
+    #     if self.root.is_leaf:
+    #         return 0
+    #     return traversal_counter(0)
 
     @property
     def root(self):
         """returns the first quad node, for conveience"""
         return self.all_quad_node[0]
 
-    # not good, implement the size option
     @classmethod
     def fill_tree(
         cls,
         bbox: "BBox",
         entities: Optional[Union[List[Tuple["UID", "BBox"]],
                                  List[Tuple["UID"]]]] = None,
-        size: int = 0,
         capacity: Optional[int] = 1,
         auto_id: Optional[bool] = False,
     ) -> "QuadTree":

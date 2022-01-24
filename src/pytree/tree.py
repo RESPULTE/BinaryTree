@@ -6,8 +6,16 @@ N = TypeVar('N')
 
 class Tree(Protocol):
 
+    root: N
+    _size: int
+
     @property
     def dtype(self):
+        '''returns the data type of that a tree contains'''
+        pass
+
+    @property
+    def size(self):
         '''returns the data type of that a tree contains'''
         pass
 
@@ -31,9 +39,7 @@ class Tree(Protocol):
     def clear(self) -> None:
         pass
 
-    def traverse(self,
-                 key: str = 'in',
-                 node: Optional[bool] = False) -> List[Union[N, T]]:
+    def traverse(self, key: str = 'in', node: Optional[bool] = False) -> List[Union[N, T]]:
         pass
 
     def find(self, value: T, node: Optional[bool] = False) -> Union[N, T]:
