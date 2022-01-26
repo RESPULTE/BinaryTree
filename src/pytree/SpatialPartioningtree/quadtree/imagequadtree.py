@@ -67,7 +67,7 @@ class ImageBasedQuadTree(QuadTree):
 
         draw = ImageDraw.Draw(self.img)
 
-        for leaf, bbox in self.find_leaves(qnode=self.root):
+        for leaf, bbox in self.find_leaves():
             x, y, w, h = bbox
             draw.rectangle((x, y, x + w, y + h),
                            fill=leaf.first_child,
@@ -84,3 +84,16 @@ class ImageBasedQuadTree(QuadTree):
 
     def show(self):
         self.img.show()
+
+    def __bool__(self):
+        return self.img is not None
+
+    def __iter__(self):
+        yield from self.find_leaves()
+
+    def __str__(self):
+        return f"{type(self).__name__}( \
+            img_name={self.img_name}, \
+            img_size={self.img_size}, \
+            threshold={self.threshold} \
+        )"

@@ -26,7 +26,6 @@ def get_best_fitting_rnode(rnode_1: R_Node, rnode_2: R_Node,
 
 # get the min max capacity right
 # check the condense tree method's correctness
-# test using PIL, somehow
 # autoid
 class RTree:
 
@@ -47,10 +46,24 @@ class RTree:
 
     def insert(self, entity_id: UID, entity_bbox: BBox) -> None:
         # restructure, set special case for leaf/empty root node
+        if isinstance(entity_id, type(None)) and not self.auto_id:
+            raise ValueError("set QuadTree's auto_id to True or provide ids for the entity")
+
+        if entity_id in self.all_entity.keys():
+            raise ValueError("entity_id already exists in the tree")
+
+        if isinstance(entity_id, type(None)):
+            int_id = list(filter(lambda id: isinstance(id, (int, float)), self.all_entity.keys()))
+            if not int_id:
+                int_id.append(0)
+            entity_id = max(int_id) + 1
+
+        entity_bbox = BBox(*entity_bbox)
+
         if self.root.is_leaf:
             target_node = self.root
         else:
-            target_node = self.find_leaves(entity_bbox=entity_bbox)
+            target_node = self.get_bounding_leaf(entity_bbox=entity_bbox)
 
         self.add_entity(entity_id, entity_bbox, target_node)
         self.check_insertion(target_node)
@@ -195,32 +208,28 @@ class RTree:
 
         return min(candidates, key=lambda rnode: rnode.area)
 
-    def find_leaves(
-            self,
-            rnode: Optional[R_Node] = None,
-            entity_bbox: Optional[BBox] = None) -> Union[R_Node, List[R_Node]]:
-
-        def find_leaf_by_bbox(rnode: R_Node, ebbox: BBox) -> R_Node:
-            # getting the node that generates the least amount of 'dead' space
-            # i.e empty space
+    def get_bounding_leaf(self, entity_bbox: BBox) -> R_Node:
+        # getting the node that generates the least amount of 'dead' space
+        # i.e empty space
+        def traversal_getter(rnode: R_Node):
             all_sibs: List[R_Node] = get_sibling(rnode)
-            target_node: R_Node = min(all_sibs, key=lambda s: get_bounding_area(s, ebbox) - s.area)
-
+            target_node: R_Node = min(all_sibs, key=lambda s: get_bounding_area(s.bbox, entity_bbox) - s.area)  # noqa
             if rnode.is_branch:
-                return find_leaf_by_bbox(target_node.child_node, ebbox)
+                return traversal_getter(target_node.child_node)
             return target_node
 
+        return traversal_getter(self.root)
+
+    def find_leaves(self, rnode: R_Node = None) -> List[R_Node]:
+
         def find_all_leaves(rnode: R_Node) -> List[R_Node]:
-            if rnode.is_leaf:
-                return rnode
-            return [find_all_leaves(c) for c in get_children(rnode)]
+            return [
+                find_all_leaves(c) for c in get_children(rnode)
+                if rnode.child_node is not None and rnode.is_branch
+            ]
 
-        if not rnode and not entity_bbox:
-            rnode = self.root
-
-        if rnode:
-            return find_all_leaves(rnode)
-        return find_leaf_by_bbox(self.root, entity_bbox)
+        rnode = self.root if rnode is None else rnode
+        return find_all_leaves(rnode)
 
     def set_node_free(self, node: Union[R_Entity, R_Node]) -> None:
         parent_rnode = node.parent_node
@@ -228,7 +237,7 @@ class RTree:
         if parent_rnode.child_node is node:
             parent_rnode.child_node = node.sibling_node
         else:
-            sibling = next(filter(lambda s: s.sibling_node is node, get_sibling(node)))
+            sibling = next(filter(lambda s: s.sibling_node is node, get_children(parent_rnode)))
             sibling.sibling_node = node.sibling_node
 
         if isinstance(node, R_Entity):
@@ -247,15 +256,12 @@ class RTree:
 
             # underflowed nodes
             if rnode.total_child < self.node_min_capacity:
-                entity_to_reallocate.append(get_children(rnode))
+                entity_to_reallocate.extend(get_children(rnode))
                 self.set_node_free(rnode)
                 continue
 
             # why: if c not in entity_to_reallocate
-            child_bboxes = [
-                c.bbox for c in get_children(rnode)
-                if c not in entity_to_reallocate
-            ]
+            child_bboxes = [c.bbox for c in get_children(rnode)]
             rnode.resize(*child_bboxes)
             rnode = rnode.parent_node
 

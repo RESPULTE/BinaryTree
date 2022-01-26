@@ -1,7 +1,6 @@
 from typing import Optional, List, Union, Tuple
 
 from ..utils import is_inscribed, is_intersecting, split_box, BBox
-from ..type_hints import UID
 
 from ._quadnode import QuadNode
 
@@ -34,47 +33,26 @@ class QuadTree:
     def num_quad_node_in_use(self):
         return self._num_quad_node_in_use
 
-    # @property
-    # def depth(self) -> int:
-    #     '''recursively get the height of the tree '''
+    @property
+    def depth(self) -> int:
+        '''recursively get the height of the tree '''
 
-    #     def traversal_counter(qnode_index) -> int:
-    #         first_child = self.all_quad_node[qnode_index].first_child
-    #         return 1 + max([
-    #             traversal_counter(first_child + i) for i in range(4)
-    #             if isinstance(first_child, int) and first_child != -1], default=0)
-    #     if self.root.is_leaf:
-    #         return 0
-    #     return traversal_counter(0)
+        def traversal_counter(qnode_index: int) -> int:
+            qnode = self.all_quad_node[qnode_index]
+
+            if qnode.is_leaf:
+                return 0
+
+            return 1 + max([traversal_counter(qnode.first_child + i) for i in range(4)])
+
+        return traversal_counter(0)
 
     @property
     def root(self):
         """returns the first quad node, for conveience"""
         return self.all_quad_node[0]
 
-    @classmethod
-    def fill_tree(
-        cls,
-        bbox: "BBox",
-        entities: Optional[Union[List[Tuple["UID", "BBox"]],
-                                 List[Tuple["UID"]]]] = None,
-        capacity: Optional[int] = 1,
-        auto_id: Optional[bool] = False,
-    ) -> "QuadTree":
-
-        if not any([entities, bbox]):
-            raise ValueError(
-                "requires at least 1 of the 2 arguements: 'size' & 'entities'")
-
-        quadtree = cls(bbox, capacity, auto_id)
-
-        [quadtree.insert(entity_data) for entity_data in entities]
-
-        return quadtree
-
-    def get_bbox(self,
-                 qnode: QuadNode,
-                 index: Optional[bool] = False) -> Tuple[int, BBox]:
+    def get_bbox(self, qnode: QuadNode) -> Tuple[int, BBox]:
         """
         returns the bounding box of a quad node
         depending on the position of the quad node in the quad tree
@@ -153,15 +131,13 @@ class QuadTree:
         returns the found quad node, its bbox and its index (optional)
         """
 
-        if not qnode and not bbox:
-            raise ValueError(
-                "at least one or the other is required, 'qnode' or 'bbox'")
         if qnode and bbox:
             raise ValueError(
                 "only one or the other is allowed, 'qnode' or 'bbox'")
 
-        if qnode:
-            qindex, qbbox = self.get_bbox(qnode=qnode, index=True)
+        if qnode or (not qnode and not bbox):
+            qnode = qnode if qnode is not None else self.root
+            qindex, qbbox = self.get_bbox(qnode=qnode)
 
         if bbox:
             qindex, _, qbbox = self.find_quad_node(bbox=bbox, index=True)
@@ -219,6 +195,9 @@ class QuadTree:
         clean_unused_qnode(self.root)
 
     def set_branch(self, qnode: QuadNode, qindex: int):
+        if qnode.is_branch:
+            raise ValueError("cannot set a branch node to branch again")
+
         qnode.total_entity = -1
 
         self._num_quad_node_in_use += 4
@@ -228,7 +207,7 @@ class QuadTree:
             qnode.first_child = len(self.all_quad_node)
             [
                 self.all_quad_node.append(QuadNode(parent_index=qindex))
-                for i in range(4)
+                for _ in range(4)
             ]
             return
 
@@ -258,8 +237,7 @@ class QuadTree:
         parent_node = self.all_quad_node[qnode.parent_index]
 
         for i in range(4):
-            self.all_quad_node[parent_node.first_child + i].set_free(
-                self._free_quad_node_index)
+            self.all_quad_node[parent_node.first_child + i].set_free(self._free_quad_node_index)
 
         self._free_quad_node_index = qindex
         self._num_quad_node_in_use -= 4

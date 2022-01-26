@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Set, Tuple, Union
+from typing import Iterable, Optional, List, Dict, Set, Tuple, Union
 
 from ..utils import BBox, get_area, is_intersecting, split_box, is_inscribed
 from ..type_hints import UID
@@ -46,10 +46,29 @@ class EntityBasedQuadTree(QuadTree):
     def num_entity_node_in_use(self):
         return self._num_entity_node_in_use
 
-    def set_free_entity_nodes(
-            self, indexed_en: List[Tuple[int, QuadEntityNode]]) -> None:
+    @classmethod
+    def fill_tree(
+        cls,
+        bbox: "BBox",
+        entities: Optional[Union[List[Tuple["UID", "BBox"]],
+                                 List[Tuple["UID"]]]] = None,
+        capacity: Optional[int] = 1,
+        auto_id: Optional[bool] = False,
+    ) -> "QuadTree":
 
-        for ind, en in indexed_en:
+        if not any([entities, bbox]):
+            raise ValueError(
+                "requires at least 1 of the 2 arguements: 'size' & 'entities'")
+
+        quadtree = cls(bbox, capacity, auto_id)
+
+        [quadtree.insert(entity_data) for entity_data in entities]
+
+        return quadtree
+
+    def set_free_entity_nodes(self, indexed_entities: List[Tuple[int, QuadEntityNode]]) -> None:
+
+        for ind, en in indexed_entities:
             owner_qnode = en.owner_node
             if owner_qnode.first_child == ind:
                 owner_qnode.first_child = en.next_index
@@ -81,11 +100,7 @@ class EntityBasedQuadTree(QuadTree):
         - holds a given entity_id
         returns a list of the entity nodes and their index (optional)
         """
-        conditions = (
-            qnode is not None,
-            bbox is not None,
-            eid is not None
-        )
+        conditions = [c is not None for c in [qnode, eid, bbox]]
         if not any(conditions):
             raise ValueError(
                 "at least one or the other is required, 'qnode' or 'eid'")
@@ -209,7 +224,7 @@ class EntityBasedQuadTree(QuadTree):
                         self.add_entity_node(current_child, eid)
 
                 if (current_child.total_entity <= self.node_capacity
-                        or num_division < self.max_division):  # noqa
+                        or num_division > self.max_division):  # noqa
                     continue
 
                 indexed_entity_nodes = self.find_entity_node(current_child,
@@ -217,6 +232,7 @@ class EntityBasedQuadTree(QuadTree):
                 bounded_entities = [(en.entity_id,
                                      self.all_entity[en.entity_id])
                                     for _, en in indexed_entity_nodes]
+
                 self.set_free_entity_nodes(indexed_entity_nodes)
 
                 split_and_insert(
@@ -227,16 +243,16 @@ class EntityBasedQuadTree(QuadTree):
                     num_division + 1,
                 )
 
-        if not all(isinstance(num, (int, float)) for num in entity_bbox):
-            raise ValueError("bounding box of entity must be a tuple of 4 numbers ")
-
         if isinstance(entity_id, type(None)) and not self.auto_id:
             raise ValueError("set QuadTree's auto_id to True or provide ids for the entity")
 
-        # if self.depth > self.max_depth:
-        #     raise ValueError(
-        #         f"Quadtree's depth has exceeded the maximum depth of {self.max_depth}\n \
-        #           current quadtree's depth: {self.depth}")
+        if entity_id in self.all_entity.keys():
+            raise ValueError("entity_id already exists in the tree")
+
+        if self.depth > self.max_depth:
+            raise ValueError(
+                f"Quadtree's depth has exceeded the maximum depth of {self.max_depth}\n \
+                  current quadtree's depth: {self.depth}")
 
         if not self.cleaned:
             self.clean_up()
@@ -249,33 +265,40 @@ class EntityBasedQuadTree(QuadTree):
             raise ValueError("entity's bbox is out of bound!")
 
         if isinstance(entity_id, type(None)):
-            int_id = filter(lambda id: isinstance(id, (int, float)),
-                            self.all_entity.keys())
+            int_id = list(filter(lambda id: isinstance(id, (int, float)), self.all_entity.keys()))
             if not int_id:
                 int_id.append(0)
-            entity_id = max(int_id) + 1 if self.all_entity else 0
+            entity_id = max(int_id) + 1
 
         self.all_entity[entity_id] = entity_bbox
 
         for qindex, qnode, qbbox in self.find_leaves(bbox=entity_bbox,
                                                      index=True):
             self.add_entity_node(qnode, entity_id)
-
             if qnode.total_entity <= self.node_capacity:
                 continue
 
-            indexed_entity_nodes = self.find_entity_node(qnode=qnode,
-                                                         index=True)
+            indexed_entity_nodes = self.find_entity_node(qnode=qnode, index=True)
             bounded_entities = [(en.entity_id, self.all_entity[en.entity_id])
                                 for _, en in indexed_entity_nodes]
+
             self.set_free_entity_nodes(indexed_entity_nodes)
             split_and_insert(qindex, qnode, qbbox, bounded_entities)
 
+    def __bool__(self) -> bool:
+        return self.all_entity != {}
+
+    def __iter__(self) -> Iterable:
+        yield from self.all_entity.items()
+
+    def __contains__(self, entity_id: Union[str, int]) -> bool:
+        return entity_id in self.all_entity.keys()
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}( \
-        num_entity: {self.num_entity}, \
-        num_quad_node: {len(self.all_quad_node)}, \
-        num_entity_node: {len(self.all_entity_node)}, \
-        num_quad_node_in_use: {self.num_quad_node_in_use}, \
-        num_entity_node_in_use: {self.num_entity_node_in_use} \
+            num_entity: {self.num_entity}, \
+            num_quad_node: {len(self.all_quad_node)}, \
+            num_entity_node: {len(self.all_entity_node)}, \
+            num_quad_node_in_use: {self.num_quad_node_in_use}, \
+            num_entity_node_in_use: {self.num_entity_node_in_use} \
         )"

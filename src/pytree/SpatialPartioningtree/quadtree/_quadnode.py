@@ -1,3 +1,4 @@
+from typing import Union
 from ..type_hints import UID
 
 
@@ -16,16 +17,16 @@ class QuadNode:
         self.parent_index = parent_index
 
     @property
-    def is_branch(self):
+    def is_branch(self) -> bool:
         return self.total_entity == -1
 
     @property
-    def is_leaf(self):
+    def is_leaf(self) -> bool:
         return self.total_entity != -1
 
     @property
-    def in_use(self):
-        return self.parent_index != None and self.total_entity != None  # noqa
+    def in_use(self) -> bool:
+        return self.parent_index is not None and self.total_entity is not None
 
     def update(self, **kwargs) -> None:
         [setattr(self, k, v) for k, v in kwargs.items()]
