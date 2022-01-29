@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import List, Optional, Tuple
 import numpy as np
 
-from .type_hints import Num, Point, RGB
+from .type_hints import Num, Point
 
 BBox = namedtuple("BBox", ["x", "y", "w", "h"], defaults=[1, 1])
 
@@ -53,6 +53,10 @@ def is_inscribed(bbox1: BBox, tbbox2: BBox) -> float:
             tbbox2.y <= bbox1.y and
             tbbox2.x + tbbox2.w >= bbox1.x + bbox1.w and
             tbbox2.y + tbbox2.h >= bbox1.y + bbox1.h)
+
+
+def is_within(point: Point, bbox: BBox) -> bool:
+    return (bbox.x + bbox.w >= point[0] >= bbox.x and bbox.y + bbox.h >= point[1] >= bbox.y)
 
 
 def crop_img_arr(img_arr: np.ndarray, bbox: BBox) -> np.ndarray:
