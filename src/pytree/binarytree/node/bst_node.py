@@ -83,9 +83,7 @@ class BST_Node(Generic[CT]):
     def is_branch(self) -> bool:
         return self.right or self.left
 
-    def traverse_node(self,
-                      key: str = 'in',
-                      node: bool = True) -> List['BST_Node']:
+    def traverse_node(self, key: str = 'in') -> List['BST_Node']:
         '''
         returns a list all the items in the binary tree in the given order type
         in-order  ['in']: from min-to-max
@@ -93,52 +91,43 @@ class BST_Node(Generic[CT]):
         post-order ['post']: root node as the end, from left to right
         level-order ['lvl']: from top-to-bottom, left-to-right, kinda like BST
         '''
-
-        def inorder_traversal(node: 'BST_Node',
-                              path: list,
-                              depth: int = 0) -> List[Tuple[int, 'BST_Node']]:
+        def inorder_traversal(node: 'BST_Node', path: list) -> List[CT]:
             if node.left:
-                inorder_traversal(node.left, path, depth + 1)
-            path.append((depth, node))
+                inorder_traversal(node.left, path)
+            path.append(node)
             if node.right:
-                inorder_traversal(node.right, path, depth + 1)
+                inorder_traversal(node.right, path)
             return path
 
-        def postorder_traversal(
-                node: 'BST_Node',
-                path: list,
-                depth: int = 0) -> List[Tuple[int, 'BST_Node']]:
+        def postorder_traversal(node: 'BST_Node', path: list) -> List[CT]:
             if node.left:
-                postorder_traversal(node.left, path, depth + 1)
+                postorder_traversal(node.left, path)
             if node.right:
-                postorder_traversal(node.right, path, depth + 1)
-            path.append((depth, node))
+                postorder_traversal(node.right, path)
+            path.append(node)
             return path
 
-        def preorder_traversal(node: 'BST_Node',
-                               path: list,
-                               depth: int = 0) -> List[Tuple[int, 'BST_Node']]:
-            path.append((depth, node))
+        def preorder_traversal(node: 'BST_Node', path: list) -> List[CT]:
+            path.append(node)
             if node.left:
-                preorder_traversal(node.left, path, depth + 1)
+                preorder_traversal(node.left, path)
             if node.right:
-                preorder_traversal(node.right, path, depth + 1)
+                preorder_traversal(node.right, path)
             return path
 
-        def levelorder_traversal(node: 'BST_Node',
-                                 path: list) -> List[Tuple[int, 'BST_Node']]:
+        def levelorder_traversal(node: 'BST_Node', path: list) -> List[CT]:
             from collections import deque
 
-            stack = deque([(node, 0)])
+            stack = deque([node])
 
             while stack != deque([]):
-                node, depth = stack.popleft()
-                path.append((depth, node))
+                node = stack.popleft()
+                path.append(node)
 
                 if node.left:
-                    stack.append((node.left, depth + 1))
+                    stack.append((node.left))
                 if node.right:
-                    stack.append((node.right, depth + 1))
+                    stack.append((node.right))
 
             return path
 
@@ -151,12 +140,7 @@ class BST_Node(Generic[CT]):
         if key not in traversing_option:
             raise ValueError(f'{key} given is not a valid option')
 
-        all_nodes = traversing_option[key](self, [])
-
-        if node:
-            return all_nodes
-
-        return [node[1].value for node in all_nodes]
+        return traversing_option[key](self, [])
 
     def insert_node(self, value: CT) -> None:
         '''insert a value into the binary tree'''

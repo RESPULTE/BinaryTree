@@ -59,11 +59,6 @@ def is_within(point: Point, bbox: BBox) -> bool:
     return (bbox.x + bbox.w >= point[0] >= bbox.x and bbox.y + bbox.h >= point[1] >= bbox.y)
 
 
-def crop_img_arr(img_arr: np.ndarray, bbox: BBox) -> np.ndarray:
-    x, y, w, h = bbox
-    return img_arr[y:y + h, x:x + w]
-
-
 def get_super_bbox(*bbox: BBox) -> BBox:
     x = min(bbox, key=lambda b: b.x).x
     y = min(bbox, key=lambda b: b.y).y
@@ -82,3 +77,42 @@ def get_area(bbox: BBox) -> float:
 
 def get_bounding_area(*bbox: BBox) -> float:
     return get_area(get_super_bbox(*bbox))
+
+
+def get_bbox(*points: Point) -> BBox:
+    points = list(points)
+
+    x_sorted = sorted(points, key=lambda p: p[0])
+    y_sorted = sorted(points, key=lambda p: p[1])
+
+    x = x_sorted[0][0]
+    y = y_sorted[0][1]
+
+    width = x_sorted[-1][0] - x
+    height = y_sorted[-1][1] - y
+
+    return BBox(x, y, width, height)
+
+
+def expand_bbox(bbox: BBox, point: Point) -> BBox:
+    if bbox.w == 0 and bbox.h == 0:
+        if bbox.x == 0 and bbox.y == 0:
+            return BBox(x=point[0], y=point[1], w=0, h=0)
+        return get_bbox((bbox.x, bbox.y), point)
+
+    min_x, min_y, width, height = bbox
+    max_x, max_y = min_x + width, min_y + height
+
+    if point[0] < min_x:
+        min_x = point[0]
+
+    elif point[0] > max_x:
+        width = point[0] - min_x
+
+    if point[1] < min_y:
+        min_y = point[1]
+
+    elif point[1] > max_y:
+        height = point[1] - min_y
+
+    return bbox._replace(x=min_x, y=min_y, w=width, h=height)

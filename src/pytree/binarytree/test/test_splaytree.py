@@ -40,7 +40,7 @@ def test_splay_in_insertion(binarytester, num_gen: List[int], splaytree: SplayTr
 
 def test_splay_in_deletion(binarytester, filled_splaytree: SplayTree):
     for val in filled_splaytree:
-        node_to_delete = filled_splaytree.find(val, node=True)
+        node_to_delete = filled_splaytree.find(val)
         filled_splaytree.delete(val)
         if node_to_delete != filled_splaytree.root:
             assert node_to_delete.parent == filled_splaytree.root

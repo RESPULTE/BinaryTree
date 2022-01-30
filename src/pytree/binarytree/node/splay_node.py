@@ -42,7 +42,7 @@ class Splay_Node(BST_Node):
         if new_node:
             new_node._update_node()
 
-    def delete(self, node_to_delete: 'Splay_Node') -> None:
+    def delete_node(self, node_to_delete: 'Splay_Node') -> None:
         '''
         remove the node that contains the given value from the tree
         update/splay the parent of the

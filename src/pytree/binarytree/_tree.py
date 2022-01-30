@@ -173,7 +173,7 @@ class BinaryTree(Generic[CT]):
         self.root.value = None
         self._size = 0
 
-    def traverse(self, key: str = 'in', node: bool = False) -> List[Union[BSN, CT]]:
+    def traverse(self, key: str = 'in') -> List[Union[BSN, CT]]:
         '''
         returns list of all the items in the tree in the given order type
         in-order  ['in']: from min-to-max
@@ -183,78 +183,64 @@ class BinaryTree(Generic[CT]):
         '''
         if self.root.value is None:
             return []
-        return self.root.traverse_node(key, node)
+        return [n.value for n in self.root.traverse_node(key)]
 
-    def find(self, value: CT, node: bool = False) -> Union[BSN, CT]:
+    def find(self, value: CT) -> CT:
         '''get the node with the given value'''
         if self.root.value is None:
             return None
         if not isinstance(value, type(self.root.value)):
             raise TypeError(f"tree does not contain value of type '{type(value).__name__}'")
-        target_node = self.root.find_node(value)
-        if target_node:
-            return target_node.value if not node else target_node
+        found_node = self.root.find_node(value)
+        return found_node.value if found_node else None
 
-    def find_lt(self,
-                value: CT,
-                node: bool = False,
-                **kwargs) -> Union[BSN, CT]:
+    def find_lt(self, value: CT, **kwargs) -> CT:
         '''get the node with the given value'''
         if self.root.value is None:
             return None
         if not isinstance(value, type(self.root.value)):
             raise TypeError(f"tree does not contain value of type '{type(value).__name__}'")
-        target_node = self.root.find_lt_node(value, **kwargs)
-        if target_node:
-            return target_node.value if not node else target_node
+        found_node = self.root.find_lt_node(value, **kwargs)
+        return found_node.value if found_node else None
 
-    def find_gt(self,
-                value: CT,
-                node: bool = False,
-                **kwargs) -> Union[BSN, CT]:
+    def find_gt(self, value: CT, **kwargs) -> CT:
         '''find the node with the closest value that's > the given value'''
         if self.root.value is None:
             return None
         if not isinstance(value, type(self.root.value)):
             raise TypeError(f"tree does not contain value of type '{type(value).__name__}'")
-        target_node = self.root.find_gt_node(value, **kwargs)
-        if target_node:
-            return target_node.value if not node else target_node
+        found_node = self.root.find_gt_node(value, **kwargs)
+        return found_node.value if found_node else None
 
-    def find_le(self,
-                value: CT,
-                node: bool = False,
-                **kwargs) -> Union[BSN, CT]:
+    def find_le(self, value: CT, **kwargs) -> CT:
         '''get the node with the given value'''
         if self.root.value is None:
             return None
         if not isinstance(value, type(self.root.value)):
             raise TypeError(f"tree does not contain value of type '{type(value).__name__}'")
-        target_node = self.root.find_le_node(value, **kwargs)
-        if target_node:
-            return target_node.value if not node else target_node
+        found_node = self.root.find_le_node(value, **kwargs)
+        return found_node.value if found_node else None
 
-    def find_ge(self, value: CT, node: bool = False, **kwargs) -> Union[BSN, CT]:
+    def find_ge(self, value: CT, **kwargs) -> CT:
         '''find the node with the closest value that's < the given value'''
         if self.root.value is None:
             return None
         if not isinstance(value, type(self.root.value)):
             raise TypeError(f"tree does not contain value of type '{type(value).__name__}'")
-        target_node = self.root.find_ge_node(value, **kwargs)
-        if target_node:
-            return target_node.value if not node else target_node
+        found_node = self.root.find_ge_node(value, **kwargs)
+        return found_node.value if found_node else None
 
-    def find_max(self, node: bool = False, **kwargs) -> Union[BSN, CT]:
+    def find_max(self, **kwargs) -> CT:
         '''get the node with the maximum value in the tree'''
-        target_node = self.root.find_max_node(**kwargs)
-        if target_node:
-            return target_node.value if not node else target_node
+        if self.root.value is None:
+            return None
+        return self.root.find_max_node(**kwargs).value
 
-    def find_min(self, node: bool = False, **kwargs) -> Union[BSN, CT]:
+    def find_min(self, **kwargs) -> CT:
         '''get the node with the minimum value in the tree'''
-        target_node = self.root.find_min_node(**kwargs)
-        if target_node:
-            return target_node.value if not node else target_node
+        if self.root.value is None:
+            return None
+        return self.root.find_min_node(**kwargs).value
 
     def __add__(self, other: Union[CT, 'BinaryTree']) -> 'BinaryTree':
         '''add this tree to another tree, omitting all repeated values'''

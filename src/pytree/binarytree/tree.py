@@ -94,17 +94,13 @@ class SplayTree(BinaryTree):
 
         def node_splayer(*args, **kwargs):
             # set the node to True to get the node for the splaying process
-            found_node = attr(*args, node=True)
+            new_attr_name = f"{attr_name}_node"
+            attr = self.root.__getattribute__(new_attr_name)
+            found_node = attr(*args, **kwargs)
 
             # splaying process
             if found_node:
                 self.root = found_node._update_node()
-
-            # if the user has not specificed the node parameter
-            # or if it's specified as False
-            # set the return value to the node's value
-            if not kwargs or ('node' in kwargs and not kwargs['node']):
-                found_node = found_node.value
 
             return found_node
 

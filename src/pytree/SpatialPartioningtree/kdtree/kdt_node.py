@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
-from typing import Tuple, Union
+from typing import Tuple, Union, List
+from heapq import heappop, heappush
 
-from ..utils import Point, get_closest
+from ..utils import Point, BBox, get_closest, is_intersecting, is_inscribed, is_within
 from ...binarytree import BST_Node
 
 
@@ -50,7 +51,7 @@ class KDT_Node(BST_Node):
                 depth=depth + 1
             )
             self.value = right_subtree_min.value
-            right_subtree_min._delete_node(right_subtree_min.depth % self.dimension)
+            right_subtree_min._delete_node(right_subtree_min.depth)
 
         elif self.left:
             left_subtree_min: 'KDT_Node' = self.left.find_min_node(
@@ -58,19 +59,58 @@ class KDT_Node(BST_Node):
                 depth=depth + 1
             )
             self.value = left_subtree_min.value
-            left_subtree_min._delete_node(left_subtree_min.depth % self.dimension)
+            left_subtree_min._delete_node(left_subtree_min.depth)
             if self.right is None and self.left:
                 self.right, self.left = self.left, self.right
         else:
-            if self.parent.left == self:
-                self.parent.left = None
+            if self.parent:
+                if self.parent.left is self:
+                    self.parent.left = None
+                else:
+                    self.parent.right = None
             else:
-                self.parent.right = None
+                self.value = None
+
+    def find_node_in_bbox(
+        self,
+        bbox: BBox,
+        tbbox: BBox,
+        depth: int = 0
+    ) -> List['KDT_Node']:
+        cd = depth % self.dimension
+
+        if is_inscribed(bbox, tbbox):
+            return self.traverse_node()
+
+        x, y, w, h = bbox
+        if cd == 0:
+            left_bbox = BBox(x, y, w - self.value[0], h)
+            right_bbox = BBox(x + self.value[0], y, w, h)
+        else:
+            left_bbox = BBox(x, y, w, h - self.value[1])
+            right_bbox = BBox(x, y + self.value[1], w, h)
+
+        bounded_nodes = []
+
+        if is_intersecting(left_bbox, tbbox):
+            if self.left:
+                bounded_nodes.extend(self.left.find_node_in_bbox(left_bbox, tbbox, depth + 1))
+
+        if is_intersecting(right_bbox, tbbox):
+            if self.right:
+                bounded_nodes.extend(self.right.find_node_in_bbox(right_bbox, tbbox, depth + 1))
+
+        if is_within(self.value, tbbox) and self.value not in bounded_nodes:
+            bounded_nodes.append(self)
+
+        return bounded_nodes
 
     def find_closest_node(self,
                           target_point: Point,
+                          best_nodes: list,
+                          num: int = 1,
                           depth: int = 0
-                          ) -> Tuple['KDT_Node', float]:
+                          ) -> Tuple[float, 'KDT_Node']:
         # keep track of the dimension whilst recursing
         cd = depth % self.dimension
 
@@ -82,9 +122,13 @@ class KDT_Node(BST_Node):
         # keep recursing until a leaf node is reached
         # after the return, compare the leaf node's parent with the leaf node
         # determine the node that the best point belongs to
-        candidate_node, _ = next_branch.find_closest_node(target_point, depth + 1) if next_branch else (self, 0)  # noqa
+        candidate_node: 'KDT_Node' = next_branch.find_closest_node(target_point, best_nodes, num, depth + 1)[-1][1] if next_branch else self  # noqa
         best_dist, best_point = get_closest(candidate_node.value, self.value, target_point)
         best_node = candidate_node if best_point is candidate_node.value else self
+
+        heappush(best_nodes, (-best_dist, best_node))
+        if len(best_nodes) > num:
+            heappop(best_nodes)
 
         # check whether a potential candidate is present in the other branch
         # by computing the vertical/horizontal distance between the node and the target_point
@@ -92,11 +136,15 @@ class KDT_Node(BST_Node):
         if best_dist >= dist_to_divider:
 
             # same process as above, just repeat it for the other branch
-            candidate_node, _ = other_branch.find_closest_node(target_point, depth + 1) if other_branch else (self, 0)  # noqa
-            best_dist, best_point = get_closest(candidate_node.value, best_point, target_point)
+            candidate_node: 'KDT_Node' = other_branch.find_closest_node(target_point, best_nodes, num, depth + 1)[-1][1] if other_branch else self  # noqa
+            best_dist, best_point = get_closest(candidate_node.value, best_node.value, target_point)
             best_node = candidate_node if best_point is candidate_node.value else best_node
 
-        return (best_node, best_dist)
+            heappush(best_nodes, (-best_dist, best_node))
+            if len(best_nodes) > num:
+                heappop(best_nodes)
+
+        return best_nodes
 
     def find_node(self,
                   value: Point,
