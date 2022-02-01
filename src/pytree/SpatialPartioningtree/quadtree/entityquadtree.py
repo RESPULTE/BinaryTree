@@ -6,7 +6,7 @@ from ..type_hints import UID
 from ._quadnode import QuadEntityNode, QuadNode
 from ._quadtree import QuadTree
 
-
+# POSSIBLE IMPROVEMENTS: weakref for more efficient garbage collection
 class EntityBasedQuadTree(QuadTree):
 
     def __init__(

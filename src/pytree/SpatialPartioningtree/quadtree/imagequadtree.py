@@ -36,7 +36,7 @@ class ImageBasedQuadTree(QuadTree):
         self.img_arr = np.asarray(img_to_process, dtype="int32")
         self.threshold = threshold
 
-        super().__init__(img_to_process.size, max_depth)
+        super().__init__(size=img_to_process.size, max_depth=max_depth)
 
     def compress(self) -> Image.Image:
 

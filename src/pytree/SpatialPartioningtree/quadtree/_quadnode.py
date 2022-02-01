@@ -18,11 +18,11 @@ class QuadNode:
 
     @property
     def is_branch(self) -> bool:
-        return self.total_entity == -1
+        return self.total_entity == -1 and self.in_use
 
     @property
     def is_leaf(self) -> bool:
-        return self.total_entity != -1
+        return self.total_entity != -1 and self.in_use
 
     @property
     def in_use(self) -> bool:

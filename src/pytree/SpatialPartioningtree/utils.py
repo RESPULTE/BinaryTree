@@ -1,6 +1,5 @@
 from collections import namedtuple
 from typing import List, Optional, Tuple
-import numpy as np
 
 from .type_hints import Num, Point
 

@@ -181,9 +181,7 @@ class QuadTree:
                 # reset the node's first_child to 1 if its a root node,
                 # -> or else it'll mess up future node allocations
                 cindex = qnode.first_child
-                if (sum(
-                        clean_unused_qnode(self.all_quad_node[cindex + i])
-                        for i in range(4)) == 4):
+                if (sum(clean_unused_qnode(self.all_quad_node[cindex + i]) for i in range(4)) == 4):
                     self.set_free_quad_node(cindex)
 
                     if qnode == self.root:

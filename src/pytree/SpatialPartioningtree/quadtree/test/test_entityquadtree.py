@@ -8,6 +8,7 @@ def entityquadtree():
     return EntityBasedQuadTree(bbox=(1000, 1000), auto_id=True)
 
 
+@pytest.mark.dependency()
 def test_set_branch(entityquadtree: EntityBasedQuadTree):
     root = entityquadtree.root
     entityquadtree.set_branch(root, 0)
@@ -23,6 +24,7 @@ def test_set_branch(entityquadtree: EntityBasedQuadTree):
     assert root.is_branch
 
 
+@pytest.mark.dependency()
 def test_add_entity_node(entityquadtree: EntityBasedQuadTree):
     all_entity_node = entityquadtree.all_entity_node
     root = entityquadtree.root
