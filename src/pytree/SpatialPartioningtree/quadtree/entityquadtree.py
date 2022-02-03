@@ -1,12 +1,12 @@
 from typing import Iterable, Optional, List, Dict, Set, Tuple, Union
 
-from ..utils import BBox, get_area, is_intersecting, split_box, is_inscribed
+from ..utils import BBox, generate_id
 from ..type_hints import UID
 
 from ._quadnode import QuadEntityNode, QuadNode
 from ._quadtree import QuadTree
 
-# POSSIBLE IMPROVEMENTS: weakref for more efficient garbage collection
+
 class EntityBasedQuadTree(QuadTree):
 
     def __init__(
@@ -15,20 +15,18 @@ class EntityBasedQuadTree(QuadTree):
         node_capacity: int = 2,
         max_depth: int = 12,
         max_division: int = 3,
-        auto_id: bool = False,
+        auto_id: bool = True,
     ) -> None:
 
         super().__init__(bbox, max_depth, auto_id)
 
-        if get_area(self.bbox) < 0:
-            raise ValueError("main bounding box must have a non-zero/negative area")
         if node_capacity < 1:
             raise ValueError("node capacity must be greater than 0")
 
         self.node_capacity = int(node_capacity)
         self.max_division = int(max_division)
 
-        self.all_entity: Dict[UID, object] = {}
+        self.all_entity: Dict[UID, BBox] = {}
         self.all_entity_node: List[QuadEntityNode] = []
 
         self._free_entity_node_index = -1
@@ -47,24 +45,33 @@ class EntityBasedQuadTree(QuadTree):
         return self._num_entity_node_in_use
 
     @classmethod
-    def fill_tree(
-        cls,
-        bbox: "BBox",
-        entities: Optional[Union[List[Tuple["UID", "BBox"]],
-                                 List[Tuple["UID"]]]] = None,
-        capacity: Optional[int] = 1,
-        auto_id: Optional[bool] = False,
-    ) -> "QuadTree":
+    def fill_tree(cls,
+                  entities: List[Union[BBox, Tuple[BBox, UID]]],
+                  node_capacity: int = 4,
+                  auto_id: bool = True
+                  ) -> 'EntityBasedQuadTree':
+        eqtree = cls(node_capacity=node_capacity, auto_id=auto_id)
 
-        if not any([entities, bbox]):
-            raise ValueError(
-                "requires at least 1 of the 2 arguements: 'size' & 'entities'")
+        if any(len(entity) == 2 for entity in entities):
+            entities_with_id = [entity for entity in entities if len(entity) == 2]
+            for entity_bbox, entity_id in entities_with_id:
+                entities.remove((entity_bbox, entity_id))
+                eqtree.insert(entity_bbox, entity_id)
 
-        quadtree = cls(bbox, capacity, auto_id)
+        for entity in entities:
+            eqtree.insert(entity)
 
-        [quadtree.insert(entity_data) for entity_data in entities]
+        return eqtree
 
-        return quadtree
+    def extend(self, entities: List[Union[BBox, Tuple[BBox, UID]]]) -> None:
+        if any(len(entity) == 2 for entity in entities):
+            entities_with_id = [entity for entity in entities if len(entity) == 2]
+            for entity_bbox, entity_id in entities_with_id:
+                entities.remove((entity_bbox, entity_id))
+                self.insert(entity_bbox, entity_id)
+
+        for entity in entities:
+            self.insert(entity)
 
     def set_free_entity_nodes(self, indexed_entities: List[Tuple[int, QuadEntityNode]]) -> None:
 
@@ -196,7 +203,7 @@ class EntityBasedQuadTree(QuadTree):
                 if other_bbox is this_bbox:
                     continue
 
-                if is_intersecting(this_bbox, other_bbox):
+                if this_bbox.is_intersecting_with(other_bbox):
                     intersecting_entities[this_eid].add(other_eid)
 
         return intersecting_entities
@@ -215,12 +222,12 @@ class EntityBasedQuadTree(QuadTree):
 
             self.set_branch(qnode, qindex)
 
-            for ind, quadrant in enumerate(split_box(qbbox)):
+            for ind, quadrant in enumerate(qbbox.split()):
                 current_index = qnode.first_child + ind
                 current_child = self.all_quad_node[current_index]
 
                 for eid, ebbox in entities:
-                    if is_intersecting(quadrant, ebbox):
+                    if quadrant.is_intersecting_with(ebbox):
                         self.add_entity_node(current_child, eid)
 
                 if (current_child.total_entity <= self.node_capacity
@@ -258,17 +265,15 @@ class EntityBasedQuadTree(QuadTree):
             self.clean_up()
             self.cleaned = True
 
-        if not isinstance(entity_bbox, BBox):
-            entity_bbox = BBox(*entity_bbox)
+        entity_bbox = BBox(*entity_bbox)
 
-        if not is_inscribed(entity_bbox, self.bbox):
+        if not entity_bbox.is_inscribed_in(self.bbox):
             raise ValueError("entity's bbox is out of bound!")
 
         if isinstance(entity_id, type(None)):
-            int_id = list(filter(lambda id: isinstance(id, (int, float)), self.all_entity.keys()))
-            if not int_id:
-                int_id.append(0)
-            entity_id = max(int_id) + 1
+            if not self.auto_id:
+                raise ValueError("set QuadTree's auto_id to True or provide ids for the entity")
+            entity_id = generate_id(self.all_entity.keys())
 
         self.all_entity[entity_id] = entity_bbox
 
@@ -295,10 +300,10 @@ class EntityBasedQuadTree(QuadTree):
         return entity_id in self.all_entity.keys()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}( \
-            num_entity: {self.num_entity}, \
-            num_quad_node: {len(self.all_quad_node)}, \
-            num_entity_node: {len(self.all_entity_node)}, \
-            num_quad_node_in_use: {self.num_quad_node_in_use}, \
-            num_entity_node_in_use: {self.num_entity_node_in_use} \
-        )"
+        return (f"{type(self).__name__}("
+                f"num_entity: {self.num_entity}, "
+                f"num_quad_node: {len(self.all_quad_node)},"
+                f"num_entity_node: {len(self.all_entity_node)}, "
+                f"num_quad_node_in_use: {self.num_quad_node_in_use}, "
+                f"num_entity_node_in_use: {self.num_entity_node_in_use})"
+                )

@@ -114,10 +114,6 @@ def test_bbox_search(filled_kdtree: KDTree, area, expected):
     filled_kdtree.range(*area) == expected
 
 
-def test_deletion(filled_kdtree: KDTree):
-    pass
-
-
 def test_bbox_resize_after_insertion(kdtree: KDTree):
     points = [(0, 10), (10, 1), (10, 10), (0, 1)]
     for point in points:
@@ -130,6 +126,7 @@ def test_bbox_resize_after_insertion(kdtree: KDTree):
 def test_bbox_resize_after_deletion(filled_kdtree: KDTree):
     for point in filled_kdtree:
         filled_kdtree.delete(point)
+        assert point not in filled_kdtree
 
     x, y, w, h = filled_kdtree.bbox
     assert (x, y, w, h) == (0, 0, 0, 0)

@@ -1,76 +1,81 @@
 from typing import List, Union, Tuple
 
-from ..utils import BBox, get_super_bbox
+from ..utils import BBox
 from ..type_hints import UID
 
 
 def get_sibling(
-        node: Union['R_Node',
-                    'R_Entity']) -> List[Union['R_Node', 'R_Entity']]:
+    node: Union['R_Node', 'R_Entity']
+) -> List[Union['R_Node', 'R_Entity']]:
     siblings = []
     while node:
         siblings.append(node)
-        node = node.sibling_node
+        node = node.sibling
 
     return siblings
 
 
 def get_children(node: 'R_Node') -> List[Union['R_Node', 'R_Entity']]:
-    return get_sibling(node.child_node)
+    return get_sibling(node.child)
+
+
+def get_all_Children(node: 'R_Node') -> List[Union['R_Node', 'R_Entity']]:
+    children = []
+    to_process = [node]
+    while to_process:
+        node = to_process.pop()
+
+        child_nodes = get_children(node)
+
+        children.append(child_nodes)
+        to_process.append(child_nodes)
+
+    return children
 
 
 class R_Node:
 
-    __slots__ = [
-        'child_node', 'sibling_node', 'parent_node', 'total_child', 'bbox'
-    ]
+    __slots__ = ['child', 'sibling', 'parent', 'total_child', 'bbox']
 
     def __init__(self,
-                 child_node: "R_Node" = None,
-                 sibling_node: "R_Node" = None,
-                 parent_node: "R_Node" = None,
+                 child: "R_Node" = None,
+                 sibling: "R_Node" = None,
+                 parent: "R_Node" = None,
                  total_child: int = 0,
                  bbox: BBox = None) -> None:
 
-        self.child_node = child_node
-        self.sibling_node = sibling_node
-        self.parent_node = parent_node
+        self.child = child
+        self.sibling = sibling
+        self.parent = parent
         self.total_child = total_child
         self.bbox = bbox
 
     @property
-    def area(self) -> float:
-        return self.bbox.w * self.bbox.h
-
-    @property
     def is_leaf(self) -> bool:
-        return not isinstance(self.child_node, type(self))
+        return not isinstance(self.child, type(self))
 
     @property
     def is_branch(self) -> bool:
-        return isinstance(self.child_node, type(self))
-
-    @property
-    def is_root(self) -> bool:
-        return self.parent_node is None
+        return isinstance(self.child, type(self))
 
     @property
     def last_child(self) -> Union['R_Entity', 'R_Node']:
-        if self.child_node is None:
+        if self.child is None:
             return None
         return get_children(self)[-1]
 
     def resize(self, *bbox: BBox) -> None:
-        self.bbox = get_super_bbox(*bbox, self.bbox) if self.bbox else get_super_bbox(*bbox)
+        self.bbox = BBox.get_super_bbox(*bbox, self.bbox) if self.bbox else \
+            BBox.get_super_bbox(*bbox)
 
     def update(self, **kwargs) -> None:
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def set_free(self, next_free_r_node: int) -> None:
-        self.child_node = next_free_r_node
+        self.child = next_free_r_node
         self.total_child = -1
-        self.sibling_node = None
-        self.parent_node = None
+        self.sibling = None
+        self.parent = None
         self.bbox = None
 
     def __str__(self):
@@ -79,31 +84,27 @@ class R_Node:
 
 class R_Entity:
 
-    __slots__ = ["uid", "sibling_node", "bbox", "parent_node"]
+    __slots__ = ["uid", "sibling", "bbox", "parent"]
 
     def __init__(self,
                  uid: UID = None,
                  bbox: BBox = None,
-                 sibling_node: int = None,
-                 parent_node: R_Node = None):
+                 sibling: int = None,
+                 parent: R_Node = None):
 
         self.uid = uid
         self.bbox = bbox
-        self.sibling_node = sibling_node
-        self.parent_node = parent_node
-
-    @property
-    def area(self) -> float:
-        return self.bbox.w * self.bbox.h
+        self.sibling = sibling
+        self.parent = parent
 
     def update(self, **kwargs) -> None:
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def set_free(self, next_free_renode: 'R_Entity') -> None:
-        self.sibling_node = next_free_renode
+        self.sibling = next_free_renode
         self.uid = None
         self.bbox = None
-        self.parent_node = None
+        self.parent = None
 
     def __str__(self):
         return f"{type(self).__name__}(bbox={self.bbox}, uid={self.uid})"

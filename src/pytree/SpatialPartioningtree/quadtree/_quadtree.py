@@ -1,6 +1,7 @@
 from typing import Optional, List, Union, Tuple
 
 from ..utils import is_inscribed, is_intersecting, split_box, BBox
+from ..type_hints import UID
 
 from ._quadnode import QuadNode
 

@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 import numpy as np
 
 from ..type_hints import RGB
-from ..utils import BBox, split_box
+from ..utils import BBox
 
 from ._quadtree import QuadTree
 from ._quadnode import QuadNode
@@ -57,7 +57,7 @@ class ImageBasedQuadTree(QuadTree):
 
             self.set_branch(qnode, qindex)
 
-            for ind, quadrant in enumerate(split_box(bbox, True)):
+            for ind, quadrant in enumerate(bbox.split(roundoff=True)):
                 child_index = qnode.first_child + ind
                 recursive_compress(self.all_quad_node[child_index],
                                    child_index, quadrant, num_division + 1)

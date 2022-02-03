@@ -2,7 +2,7 @@ from hashlib import new
 from typing import List, Tuple
 
 from .kdt_node import KDT_Node
-from ..utils import BBox, Point, expand_bbox, get_area
+from ..utils import BBox, Point
 from ...binarytree._tree import BinaryTree
 
 
@@ -16,8 +16,11 @@ class KDTree(BinaryTree):
         self.bbox = BBox(0, 0, 0, 0)
 
     def insert(self, point: Point) -> None:
+        if not isinstance(point, tuple) or \
+                any(not isinstance(c, (float, int)) for c in point):
+            raise ValueError(f"{type(self).__name__} only accepts tuple of int/float")
         super().insert(point)
-        self.bbox = expand_bbox(self.bbox, point)
+        self.bbox.expand(point)
 
     def delete(self, point: Point) -> None:
         super().delete(point)
@@ -50,7 +53,7 @@ class KDTree(BinaryTree):
             if new_max_y is not None:
                 new_h -= max_y - new_max_y[1]
 
-        self.bbox = self.bbox._replace(x=min_x, y=min_y, w=new_w, h=new_h)
+        self.bbox.update(x=min_x, y=min_y, w=new_w, h=new_h)
 
     def query(self,
               target_point: Point,
@@ -72,7 +75,7 @@ class KDTree(BinaryTree):
     def range(self, x1: int, y1: int, x2: int, y2: int) -> List['KDT_Node']:
         target_bbox = BBox(x1, y1, x2 - x1, y2 - y1)
 
-        if get_area(target_bbox) <= 0:
+        if target_bbox.area <= 0:
             raise ValueError('Area must be positive')
 
         found_nodes: List[KDT_Node] = self.root.find_node_in_bbox(bbox=self.bbox, tbbox=target_bbox)

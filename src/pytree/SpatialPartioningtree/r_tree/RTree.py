@@ -3,67 +3,102 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from ._r_node import R_Entity, R_Node, get_sibling, get_children
 
-from ..utils import BBox, get_area, get_bounding_area, is_inscribed, is_intersecting
+from ..utils import BBox, is_inscribed, is_intersecting, generate_id
 from ..type_hints import UID
 
 
-def get_best_fitting_rnode(rnode_1: R_Node, rnode_2: R_Node,
-                           tbbox: BBox) -> Union[R_Node, None]:
-    bbox_1 = get_bounding_area(rnode_1.bbox, tbbox)
-    bbox_2 = get_bounding_area(rnode_2.bbox, tbbox)
+def get_best_fitting_rnode(rnode_1: R_Node, rnode_2: R_Node, tbbox: BBox) -> Union[R_Node, None]:
 
-    enlargement_1 = bbox_1 - get_area(rnode_1.bbox)
-    enlargement_2 = bbox_2 - get_area(rnode_2.bbox)
+    super_bbox_1_area = BBox.get_super_bbox(rnode_1.bbox, tbbox).area
+    super_bbox_2_area = BBox.get_super_bbox(rnode_2.bbox, tbbox).area
+
+    enlargement_1 = super_bbox_1_area - rnode_1.bbox.area
+    enlargement_2 = super_bbox_2_area - rnode_2.bbox.area
 
     if enlargement_1 != enlargement_2:
         return rnode_1 if enlargement_1 < enlargement_2 else rnode_2
 
-    if bbox_1 != bbox_2:
-        return rnode_1 if bbox_1 < bbox_2 else rnode_2
+    if super_bbox_1_area != super_bbox_2_area:
+        return rnode_1 if super_bbox_1_area < super_bbox_2_area else rnode_2
 
     return None
 
 
-# get the min max capacity right
-# check the condense tree method's correctness
-# autoid
 class RTree:
 
-    def __init__(self, node_capacity: int = 4, auto_id: bool = False) -> None:
+    def __init__(self,
+                 node_capacity: int = 4,
+                 max_boundary: Tuple[int, int] = None,
+                 auto_id: bool = False
+                 ) -> None:
         self.node_max_capacity = node_capacity
         self.node_min_capacity = node_capacity // 2
+        self.max_boundary = BBox(0, 0, *max_boundary) if max_boundary else None
         self.auto_id = auto_id
 
         self.root: R_Node = R_Node()
-
-        # for fast access/query
         self.all_entity: Dict[UID, R_Entity] = {}
-        # might add another list for all_rnode
-        # if the pointers are at risk of being garbage collected
 
         self._free_node = None
         self._free_entity = None
 
-    def insert(self, entity_id: UID, entity_bbox: BBox) -> None:
-        # restructure, set special case for leaf/empty root node
-        if isinstance(entity_id, type(None)) and not self.auto_id:
-            raise ValueError("set QuadTree's auto_id to True or provide ids for the entity")
+    @property
+    def height(self):
+        '''recursively get the height of the node'''
+        def traversal_counter(node) -> int:
+            if isinstance(node, R_Entity):
+                return -1
+            return 1 + max(traversal_counter(c) for c in get_children(node))
 
+        return traversal_counter(self.root)
+
+    @classmethod
+    def fill_tree(cls,
+                  entities: List[Union[BBox, Tuple[BBox, UID]]],
+                  node_capacity: int = 4,
+                  auto_id: bool = True
+                  ) -> 'RTree':
+        rtree = cls(node_capacity=node_capacity, auto_id=auto_id)
+
+        if any(len(entity) == 2 for entity in entities):
+            entities_with_id = [entity for entity in entities if len(entity) == 2]
+            for entity_bbox, entity_id in entities_with_id:
+                entities.remove((entity_bbox, entity_id))
+                rtree.insert(entity_bbox, entity_id)
+
+        for entity in entities:
+            rtree.insert(entity)
+
+        return rtree
+
+    def extend(self, entities: List[Union[BBox, Tuple[BBox, UID]]]) -> None:
+        if any(len(entity) == 2 for entity in entities):
+            entities_with_id = [entity for entity in entities if len(entity) == 2]
+            for entity_bbox, entity_id in entities_with_id:
+                entities.remove((entity_bbox, entity_id))
+                self.insert(entity_bbox, entity_id)
+
+        for entity in entities:
+            self.insert(entity)
+
+    def insert(self, entity_bbox: BBox, entity_id: Optional[UID] = None) -> None:
         if entity_id in self.all_entity.keys():
             raise ValueError("entity_id already exists in the tree")
 
         if isinstance(entity_id, type(None)):
-            int_id = list(filter(lambda id: isinstance(id, (int, float)), self.all_entity.keys()))
-            if not int_id:
-                int_id.append(0)
-            entity_id = max(int_id) + 1
+            if not self.auto_id:
+                raise ValueError("set QuadTree's auto_id to True or provide ids for the entity")
+            entity_id = generate_id(self.all_entity.keys())
 
         entity_bbox = BBox(*entity_bbox)
+
+        if self.max_boundary and not entity_bbox.is_inscribed_in(self.max_boundary):
+            raise ValueError("entity out of bound")
 
         if self.root.is_leaf:
             target_node = self.root
         else:
-            target_node = self.get_bounding_leaf(entity_bbox=entity_bbox)
+            target_node = self.find_leaves(entity_bbox=entity_bbox)
 
         self.add_entity(entity_id, entity_bbox, target_node)
         self.check_insertion(target_node)
@@ -83,7 +118,7 @@ class RTree:
         rightmost_child = all_children.pop(-1)
 
         node_1, node_2 = self.split_rnode(rnode)
-        parent_node = rnode.parent_node
+        parent = rnode.parent
         self.reallocate_child(node_1, leftmost_child)
         self.reallocate_child(node_2, rightmost_child)
 
@@ -102,38 +137,36 @@ class RTree:
             self.reallocate_child(target_rnode, child)
 
         # might remove
-        parent_node.resize(node_1.bbox, node_2.bbox)
-        self.check_insertion(parent_node)
+        parent.resize(node_1.bbox, node_2.bbox)
+        self.check_insertion(parent)
 
-    def reallocate_child(self, p_rnode: R_Node, child: Union[R_Node,
-                                                             R_Entity]) -> None:
-        # might restructure
-        child.parent_node = p_rnode
+    def reallocate_child(self, p_rnode: R_Node, child: Union[R_Node, R_Entity]) -> None:
+        child.parent = p_rnode
 
         last_child = p_rnode.last_child
         if last_child:
-            last_child.sibling_node = child
+            last_child.sibling = child
         else:
-            p_rnode.child_node = child
+            p_rnode.child = child
 
         p_rnode.total_child += 1
         p_rnode.resize(child.bbox)
 
     def split_rnode(self, rnode: R_Node) -> Tuple[R_Node, R_Node]:
-        if not rnode.parent_node:
-            new_root = R_Node(child_node=rnode, bbox=rnode.bbox, total_child=2)
-            rnode.parent_node = new_root
+        if not rnode.parent:
+            new_root = R_Node(child=rnode, bbox=rnode.bbox, total_child=2)
+            rnode.parent = new_root
             self.root = new_root
 
-        new_sibling = R_Node(sibling_node=rnode.sibling_node,
-                             parent_node=rnode.parent_node)
+        new_sibling = R_Node(sibling=rnode.sibling,
+                             parent=rnode.parent)
 
         for child in get_children(rnode):
-            child.sibling_node = None
+            child.sibling = None
 
-        rnode.update(sibling_node=new_sibling,
+        rnode.update(sibling=new_sibling,
                      bbox=None,
-                     child_node=None,
+                     child=None,
                      total_child=0)
 
         return rnode, new_sibling
@@ -142,7 +175,7 @@ class RTree:
         if entity_id not in self.all_entity:
             raise ValueError(f"{entity_id} is not in {type(self).__name__}")
         entity = self.all_entity[entity_id]
-        leaf_owner = entity.parent_node
+        leaf_owner = entity.parent
         self.set_node_free(entity)
         self.condense_tree(leaf_owner)
 
@@ -178,16 +211,16 @@ class RTree:
         new_entity = R_Entity(
             uid=entity_id,
             bbox=entity_bbox,
-            parent_node=rnode,
+            parent=rnode,
         )
 
         self.all_entity[entity_id] = new_entity
         last_child = rnode.last_child
 
         if last_child:
-            last_child.sibling_node = new_entity
+            last_child.sibling = new_entity
         else:
-            rnode.child_node = new_entity
+            rnode.child = new_entity
 
         rnode.resize(entity_bbox)
         rnode.total_child += 1
@@ -206,39 +239,42 @@ class RTree:
                 to_process.extend(get_children(node))
                 candidates.append(node)
 
-        return min(candidates, key=lambda rnode: rnode.area)
+        return min(candidates, key=lambda rnode: rnode.bbox.area)
 
-    def get_bounding_leaf(self, entity_bbox: BBox) -> R_Node:
-        # getting the node that generates the least amount of 'dead' space
-        # i.e empty space
+    def find_leaves(self, rnode: R_Node = None, entity_bbox: BBox = None) -> List[R_Node]:
+
+        def find_all_leaves(rnode: R_Node, leaves: list) -> List[R_Node]:
+            if rnode.is_leaf:
+                leaves.append(rnode)
+            else:
+                for child in get_children(rnode):
+                    find_all_leaves(child, leaves)
+
+            return leaves
+
         def traversal_getter(rnode: R_Node):
+            # getting the node that generates the least amount of 'dead' space
             all_sibs: List[R_Node] = get_sibling(rnode)
-            target_node: R_Node = min(all_sibs, key=lambda s: get_bounding_area(s.bbox, entity_bbox) - s.area)  # noqa
+            target_node: R_Node = min(all_sibs,
+                                      key=lambda s:
+                                      BBox.get_super_bbox(s.bbox, entity_bbox).area - s.bbox.area)
             if rnode.is_branch:
-                return traversal_getter(target_node.child_node)
+                return traversal_getter(target_node.child)
             return target_node
+
+        if not entity_bbox:
+            return find_all_leaves(self.root if rnode is None else rnode, [])
 
         return traversal_getter(self.root)
 
-    def find_leaves(self, rnode: R_Node = None) -> List[R_Node]:
-
-        def find_all_leaves(rnode: R_Node) -> List[R_Node]:
-            return [
-                find_all_leaves(c) for c in get_children(rnode)
-                if rnode.child_node is not None and rnode.is_branch
-            ]
-
-        rnode = self.root if rnode is None else rnode
-        return find_all_leaves(rnode)
-
     def set_node_free(self, node: Union[R_Entity, R_Node]) -> None:
-        parent_rnode = node.parent_node
+        parent_rnode = node.parent
 
-        if parent_rnode.child_node is node:
-            parent_rnode.child_node = node.sibling_node
+        if parent_rnode.child is node:
+            parent_rnode.child = node.sibling
         else:
-            sibling = next(filter(lambda s: s.sibling_node is node, get_children(parent_rnode)))
-            sibling.sibling_node = node.sibling_node
+            sibling = next(filter(lambda s: s.sibling is node, get_children(parent_rnode)))
+            sibling.sibling = node.sibling
 
         if isinstance(node, R_Entity):
             node.set_free(self._free_entity)
@@ -250,9 +286,8 @@ class RTree:
         parent_rnode.total_child -= 1
 
     def condense_tree(self, rnode: R_Node) -> None:
-        # restructure, correctness check
         entity_to_reallocate: List[R_Entity] = []
-        while rnode.parent_node:
+        while rnode.parent:
 
             # underflowed nodes
             if rnode.total_child < self.node_min_capacity:
@@ -260,10 +295,21 @@ class RTree:
                 self.set_node_free(rnode)
                 continue
 
-            # why: if c not in entity_to_reallocate
             child_bboxes = [c.bbox for c in get_children(rnode)]
             rnode.resize(*child_bboxes)
-            rnode = rnode.parent_node
+            rnode = rnode.parent
 
         for entity in entity_to_reallocate:
             self.insert(entity.uid, entity.bbox)
+
+    def __repr__(self):
+        return f"to be implemented"
+
+    def __bool__(self):
+        return self.all_entity != {}
+
+    def __contains__(self, entity_id: UID):
+        return entity_id in self.all_entity.keys()
+
+    def __iter__(self):
+        return iter(self.all_entity.items())
