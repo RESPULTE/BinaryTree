@@ -1,4 +1,4 @@
-from .quadtree import *  # noqa
-from .kdtree import *  # noqa
-from .r_tree import *  # noqa
+from .Quadtree import *
+from .KDtree import *
+from .Rtree import *
 from .utils import *

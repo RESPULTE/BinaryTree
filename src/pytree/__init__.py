@@ -1,2 +1,2 @@
-from .binarytree import *  # noqa
-from .SpatialPartioningtree import *  # noqa
+from .binarytree import *
+from .SpatialPartioningtree import *

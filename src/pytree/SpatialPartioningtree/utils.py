@@ -51,6 +51,9 @@ class BBox:
 
         return cls(x, y, width, height)
 
+    def copy(self) -> 'BBox':
+        return BBox(self.x, self.y, self.w, self.h)
+
     def update(self, **kwargs) -> None:
         [setattr(self, k, v) for k, v in kwargs.items()]
 
@@ -112,6 +115,34 @@ class BBox:
                 height = point[1] - min_y
 
         return self.update(x=min_x, y=min_y, w=width, h=height)
+
+    def __eq__(self, other: 'BBox') -> bool:
+        return (
+            self.x == other.x and
+            self.y == other.y and
+            self.w == other.w and
+            self.h == other.h
+        )
+
+    def __ne__(self, other: 'BBox') -> bool:
+        return (
+            self.x != other.x or
+            self.y != other.y or
+            self.w != other.w or
+            self.h != other.h
+        )
+
+    def __gt__(self, other: 'BBox') -> bool:
+        return self.area > other.area
+
+    def __lt__(self, other: 'BBox') -> bool:
+        return self.area < other.area
+
+    def __ge__(self, other: 'BBox') -> bool:
+        return self.area >= other.area
+
+    def __le__(self, other: 'BBox') -> bool:
+        return self.area <= other.area
 
     def __hash__(self):
         return hash(self.x, self.y, self.w, self.h)

@@ -1,13 +1,47 @@
-from enum import auto
 from typing import Dict, List, Optional, Tuple, Union
-
-from ._r_node import R_Entity, R_Node, get_sibling, get_children
 
 from ..utils import BBox, generate_id
 from ..type_hints import UID
 
+# tons of optimisation to be done
+# the allocation of the nodes after the node splitting
+# some clean ups for the core methods to make things a lil more readable
 
-def get_best_fitting_rnode(rnode_1: R_Node, rnode_2: R_Node, tbbox: BBox) -> Union[R_Node, None]:
+
+def get_sibling(
+    node: Union['R_Node', 'R_Entity']
+) -> List[Union['R_Node', 'R_Entity']]:
+    siblings = []
+    while node:
+        siblings.append(node)
+        node = node.sibling
+
+    return siblings
+
+
+def get_children(node: 'R_Node') -> List[Union['R_Node', 'R_Entity']]:
+    return get_sibling(node.child)
+
+
+def get_all_children(node: 'R_Node') -> List[Union['R_Node', 'R_Entity']]:
+    children = []
+    to_process = [node]
+    while to_process:
+        node = to_process.pop()
+
+        child_nodes = get_children(node)
+
+        children.append(child_nodes)
+        to_process.append(child_nodes)
+
+    return children
+
+
+def get_best_fitting_rnode(
+    rnode_1: 'R_Node',
+    rnode_2: 'R_Node',
+    tbbox: BBox
+) -> Union['R_Node', None]:
 
     super_bbox_1_area = BBox.get_super_bbox(rnode_1.bbox, tbbox).area
     super_bbox_2_area = BBox.get_super_bbox(rnode_2.bbox, tbbox).area
@@ -22,6 +56,83 @@ def get_best_fitting_rnode(rnode_1: R_Node, rnode_2: R_Node, tbbox: BBox) -> Uni
         return rnode_1 if super_bbox_1_area < super_bbox_2_area else rnode_2
 
     return None
+
+
+class R_Node:
+
+    __slots__ = ['child', 'sibling', 'parent', 'total_child', 'bbox']
+
+    def __init__(self,
+                 child: "R_Node" = None,
+                 sibling: "R_Node" = None,
+                 parent: "R_Node" = None,
+                 total_child: int = 0,
+                 bbox: BBox = None) -> None:
+
+        self.child = child
+        self.sibling = sibling
+        self.parent = parent
+        self.total_child = total_child
+        self.bbox = bbox
+
+    @property
+    def is_leaf(self) -> bool:
+        return not isinstance(self.child, type(self))
+
+    @property
+    def is_branch(self) -> bool:
+        return isinstance(self.child, type(self))
+
+    @property
+    def last_child(self) -> Union['R_Entity', 'R_Node']:
+        if self.child is None:
+            return None
+        return get_children(self)[-1]
+
+    def resize(self, *bbox: BBox) -> None:
+        self.bbox = BBox.get_super_bbox(*bbox, self.bbox) \
+            if self.bbox else BBox.get_super_bbox(*bbox)
+
+    def update(self, **kwargs) -> None:
+        [setattr(self, k, v) for k, v in kwargs.items()]
+
+    def set_free(self, next_free_r_node: int) -> None:
+        self.child = next_free_r_node
+        self.total_child = -1
+        self.sibling = None
+        self.parent = None
+        self.bbox = None
+
+    def __str__(self):
+        return f"{type(self).__name__}(bbox={self.bbox}, total_child={self.total_child})"
+
+
+class R_Entity:
+
+    __slots__ = ["uid", "sibling", "bbox", "parent"]
+
+    def __init__(self,
+                 uid: UID = None,
+                 bbox: BBox = None,
+                 sibling: int = None,
+                 parent: R_Node = None):
+
+        self.uid = uid
+        self.bbox = bbox
+        self.sibling = sibling
+        self.parent = parent
+
+    def update(self, **kwargs) -> None:
+        [setattr(self, k, v) for k, v in kwargs.items()]
+
+    def set_free(self, next_free_renode: 'R_Entity') -> None:
+        self.sibling = next_free_renode
+        self.uid = None
+        self.bbox = None
+        self.parent = None
+
+    def __str__(self):
+        return f"{type(self).__name__}(bbox={self.bbox}, uid={self.uid})"
 
 
 class RTree:
@@ -152,11 +263,14 @@ class RTree:
         p_rnode.total_child += 1
         p_rnode.resize(child.bbox)
 
+    # clean up
     def split_rnode(self, rnode: R_Node) -> Tuple[R_Node, R_Node]:
         if not rnode.parent:
             new_root = R_Node(child=rnode, bbox=rnode.bbox, total_child=2)
             rnode.parent = new_root
             self.root = new_root
+        else:
+            rnode.parent.total_child += 1
 
         new_sibling = R_Node(sibling=rnode.sibling,
                              parent=rnode.parent)
@@ -183,8 +297,8 @@ class RTree:
         if rm_cached:
             self._free_entity = None
             self._free_node = None
-
-        [self.delete(eid) for eid in self.all_entity]
+        for eid in self.all_entity.keys():
+            self.delete(eid)
 
     def query(self, bbox: BBox) -> List[UID]:
 
@@ -255,9 +369,7 @@ class RTree:
         def traversal_getter(rnode: R_Node):
             # getting the node that generates the least amount of 'dead' space
             all_sibs: List[R_Node] = get_sibling(rnode)
-            target_node: R_Node = min(all_sibs,
-                                      key=lambda s:
-                                      BBox.get_super_bbox(s.bbox, entity_bbox).area - s.bbox.area)
+            target_node: R_Node = min(all_sibs, key=lambda s: BBox.get_super_bbox(s.bbox, entity_bbox).area - s.bbox.area)  # noqa
             if rnode.is_branch:
                 return traversal_getter(target_node.child)
             return target_node
@@ -267,6 +379,7 @@ class RTree:
 
         return traversal_getter(self.root)
 
+    # clean up
     def set_node_free(self, node: Union[R_Entity, R_Node]) -> None:
         parent_rnode = node.parent
 

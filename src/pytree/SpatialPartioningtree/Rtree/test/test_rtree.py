@@ -1,7 +1,7 @@
-from textwrap import fill
 import pytest
+from random import randint as rnd
 from pytree import RTree
-from pytree.SpatialPartioningtree.r_tree._r_node import get_children
+from pytree.SpatialPartioningtree.Rtree import get_children
 
 
 @pytest.fixture
@@ -11,12 +11,7 @@ def rtree():
 
 @pytest.fixture
 def entities():
-    return [
-        (10, 10, 20, 20), (0, 0, 20, 20), (1000, 100, 20, 20),
-        (900, 500, 20, 20), (34, 45, 1, 1), (34, 4534, 1, 1),
-        (34, 45, 10, 10), (34, 45, 1670, 10), (12, 23, 545, 56),
-        (23, 45, 24, 56), (234, 231, 56, 23), (0, 34, 2, 1)
-    ]
+    return [tuple([rnd(0, 1000) for _ in range(4)]) for _ in range(0, 1000)]
 
 
 @pytest.fixture
@@ -27,12 +22,12 @@ def filled_rtree(entities):
 def test_insertion(filled_rtree: RTree, entities):
     assert filled_rtree.height >= 1
 
-    inserted_entities = []
+    num_inserted_entities = 0
     for leaf in filled_rtree.find_leaves():
         assert leaf.is_leaf
-        inserted_entities.extend(get_children(leaf))
+        num_inserted_entities += len(get_children(leaf))
 
-    assert len(entities) == len(inserted_entities)
+    assert len(entities) == num_inserted_entities
 
 
 def test_invalid_id_deletion(filled_rtree: RTree):

@@ -1,3 +1,3 @@
-from .tree import *  # noqa
+from .tree import *
 from ._tree import BinaryTree
-from .node import *  # noqa
+from .node import *
