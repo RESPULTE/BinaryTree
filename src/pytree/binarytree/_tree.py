@@ -2,7 +2,7 @@ from typing import Generic, Union, Tuple, List
 import pickle
 
 from ._type_hint import CT, BSN
-from .node import BST_Node
+from .Node import BST_Node
 
 
 class BinaryTree(Generic[CT]):

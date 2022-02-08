@@ -160,8 +160,7 @@ class EntityBasedQuadTree(BaseQuadTree):
             next_index = leaf.first_child
             while next_index != -1:
                 entity_node = self.all_entity_node[next_index]
-                entity_data = (next_index,
-                               entity_node) if index else entity_node
+                entity_data = (next_index, entity_node) if index else entity_node
                 entity_nodes.append(entity_data)
                 next_index = entity_node.next_index
 

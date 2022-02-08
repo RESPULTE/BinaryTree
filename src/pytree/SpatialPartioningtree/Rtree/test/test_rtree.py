@@ -1,7 +1,7 @@
 import pytest
 from random import randint as rnd
 from pytree import RTree
-from pytree.SpatialPartioningtree.Rtree import get_children
+from pytree.SpatialPartioningtree.Rtree.rtree import get_children
 
 
 @pytest.fixture

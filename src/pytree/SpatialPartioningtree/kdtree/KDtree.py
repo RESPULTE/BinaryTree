@@ -1,9 +1,8 @@
-from hashlib import new
 from typing import List, Tuple
 
 from .kdt_node import KDT_Node
 from ..utils import BBox, Point
-from ...binarytree._tree import BinaryTree
+from ...Binarytree._tree import BinaryTree
 
 
 class KDTree(BinaryTree):

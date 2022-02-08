@@ -3,7 +3,7 @@ from typing import Tuple, Union, List
 from heapq import heappop, heappush
 
 from ..utils import Point, BBox, get_closest
-from ...binarytree import BST_Node
+from ...Binarytree import BST_Node
 
 
 @dataclass

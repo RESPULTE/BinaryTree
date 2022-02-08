@@ -1,2 +1,2 @@
-from .binarytree import *
+from .Binarytree import *
 from .SpatialPartioningtree import *

@@ -1,4 +1,4 @@
-from .node import RBT_Node, AVL_Node, Splay_Node, BST_Node
+from .Node import RBT_Node, AVL_Node, Splay_Node, BST_Node
 from ._tree import BinaryTree
 
 __all__ = ['RBTree', 'BSTree', 'AVLTree', 'SplayTree']
