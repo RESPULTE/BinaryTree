@@ -5,8 +5,7 @@ import numpy as np
 from ..type_hints import RGB
 from ..utils import BBox
 
-from ._quadtree import QuadTree
-from ._quadnode import QuadNode
+from ._quadtree import BaseQuadTree, QuadNode
 
 
 def get_average_rgb(img_arr: np.ndarray) -> Tuple[RGB, float]:
@@ -21,7 +20,7 @@ def crop_img_arr(img_arr: np.ndarray, bbox: BBox) -> np.ndarray:
     return img_arr[y:y + h, x:x + w]
 
 
-class ImageBasedQuadTree(QuadTree):
+class ImageBasedQuadTree(BaseQuadTree):
 
     def __init__(self,
                  img_dir: str,

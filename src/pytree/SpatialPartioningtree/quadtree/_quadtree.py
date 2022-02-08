@@ -1,12 +1,57 @@
 from typing import Optional, List, Union, Tuple
 
-from ..utils import is_inscribed, is_intersecting, split_box, BBox
+from ..utils import BBox
 from ..type_hints import UID
 
-from ._quadnode import QuadNode
+
+class QuadNode:
+
+    __slots__ = ["first_child", "total_entity", "parent_index"]
+
+    def __init__(
+        self,
+        first_child: int = -1,
+        total_entity: int = 0,
+        parent_index: "QuadNode" = -1,
+    ):
+        self.first_child = first_child
+        self.total_entity = total_entity
+        self.parent_index = parent_index
+
+    @property
+    def is_branch(self) -> bool:
+        return self.total_entity == -1 and self.in_use
+
+    @property
+    def is_leaf(self) -> bool:
+        return self.total_entity != -1 and self.in_use
+
+    @property
+    def in_use(self) -> bool:
+        return self.parent_index is not None and self.total_entity is not None
+
+    def update(self, **kwargs) -> None:
+        [setattr(self, k, v) for k, v in kwargs.items()]
+
+    def set_free(self, next_free_qnode_index: int) -> None:
+        self.first_child = next_free_qnode_index
+        self.total_entity = None
+        self.parent_index = None
+
+    def __str__(self):
+        return f" \
+        QuadNode(first_child={self.first_child}, \
+        total_entity={self.total_entity}, \
+        parent_index={self.parent_index})"
+
+    def __repr__(self):
+        return f" \
+        QuadNode(first_child={self.first_child}, \
+        total_entity={self.total_entity}, \
+        parent_index={self.parent_index})"
 
 
-class QuadTree:
+class BaseQuadTree:
 
     def __init__(
         self,
@@ -77,7 +122,7 @@ class QuadTree:
         # -> the last bounding bbox will be the node's bbox
         tbbox = self.bbox
         for quadrant_index in quadrants:
-            for ind, quad in enumerate(split_box(tbbox)):
+            for ind, quad in enumerate(tbbox.split()):
                 if ind == quadrant_index:
                     tbbox = quad
 
@@ -108,11 +153,10 @@ class QuadTree:
             if qnode.is_leaf:
                 continue
 
-            for ind, quadrant in enumerate(split_box(qbbox)):
+            for ind, quadrant in enumerate(qbbox.split()):
                 # compare the area of the splitted quadrant and bbox
                 # consider the quadrant if its area is >= the bbox's area
-                if is_intersecting(bbox, quadrant) and is_inscribed(
-                        bbox, quadrant):
+                if bbox.intersect(quadrant) and bbox.is_within(quadrant):
                     to_process.append((qnode.first_child + ind, quadrant))
 
         target_qnode = min(candidates,
@@ -160,8 +204,8 @@ class QuadTree:
                 bounded_leaves.append(quad_data)
                 continue
 
-            for ind, quadrant in enumerate(split_box(qbbox)):
-                if is_intersecting(qbbox, quadrant):
+            for ind, quadrant in enumerate(qbbox.split()):
+                if qbbox.intersect(quadrant):
                     to_process.append((qnode.first_child + ind, quadrant))
 
         return bounded_leaves

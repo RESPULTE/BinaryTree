@@ -22,6 +22,7 @@ class KDTree(BinaryTree):
         super().insert(point)
         self.bbox.expand(point)
 
+    # might abstract out to the bbox class
     def delete(self, point: Point) -> None:
         super().delete(point)
         if self.root.value is None:

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Tuple, Union, List
 from heapq import heappop, heappush
 
-from ..utils import Point, BBox, get_closest, is_intersecting, is_inscribed
+from ..utils import Point, BBox, get_closest
 from ...binarytree import BST_Node
 
 
@@ -79,7 +79,7 @@ class KDT_Node(BST_Node):
     ) -> List['KDT_Node']:
         cd = depth % self.dimension
 
-        if is_inscribed(bbox, tbbox):
+        if bbox.is_within(tbbox):
             return self.traverse_node()
 
         x, y, w, h = bbox
@@ -92,11 +92,11 @@ class KDT_Node(BST_Node):
 
         bounded_nodes = []
 
-        if left_bbox.is_intersecting_with(tbbox):
+        if left_bbox.intersect(tbbox):
             if self.left:
                 bounded_nodes.extend(self.left.find_node_in_bbox(left_bbox, tbbox, depth + 1))
 
-        if right_bbox.is_intersecting_with(tbbox):
+        if right_bbox.intersect(tbbox):
             if self.right:
                 bounded_nodes.extend(self.right.find_node_in_bbox(right_bbox, tbbox, depth + 1))
 

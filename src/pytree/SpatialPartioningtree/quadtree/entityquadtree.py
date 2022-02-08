@@ -3,11 +3,47 @@ from typing import Iterable, Optional, List, Dict, Set, Tuple, Union
 from ..utils import BBox, generate_id
 from ..type_hints import UID
 
-from ._quadnode import QuadEntityNode, QuadNode
-from ._quadtree import QuadTree
+from ._quadtree import BaseQuadTree, QuadNode
 
 
-class EntityBasedQuadTree(QuadTree):
+class QuadEntityNode:
+
+    __slots__ = ["next_index", "entity_id", "owner_node"]
+
+    def __init__(self,
+                 entity_id: UID = -1,
+                 next_index: int = -1,
+                 owner_node: QuadNode = None):
+        self.entity_id = entity_id
+        self.next_index = next_index
+        self.owner_node = owner_node
+
+    @property
+    def in_use(self):
+        return self.entity_id and self.owner_node
+
+    def update(self, **kwargs) -> None:
+        [setattr(self, k, v) for k, v in kwargs.items()]
+
+    def set_free(self, next_free_enode_index: int) -> None:
+        self.next_index = next_free_enode_index
+        self.entity_id = None
+        self.owner_node = None
+
+    def __str__(self):
+        return f" \
+        QuadEntityNode(next_index={self.next_index}, \
+        entity_id={self.entity_id}, \
+        owner_node={self.owner_node})"
+
+    def __repr__(self):
+        return f" \
+        QuadEntityNode(next_index={self.next_index}, \
+        entity_id={self.entity_id}, \
+        owner_node={self.owner_node})"
+
+
+class EntityBasedQuadTree(BaseQuadTree):
 
     def __init__(
         self,
@@ -29,8 +65,8 @@ class EntityBasedQuadTree(QuadTree):
         self.all_entity: Dict[UID, BBox] = {}
         self.all_entity_node: List[QuadEntityNode] = []
 
-        self._free_entity_node_index = -1
-        self._num_entity_node_in_use = 0
+        self.__free_entity_node_index = -1
+        self.__num_entity_node_in_use = 0
 
     @property
     def num_entity(self):
@@ -42,7 +78,7 @@ class EntityBasedQuadTree(QuadTree):
 
     @property
     def num_entity_node_in_use(self):
-        return self._num_entity_node_in_use
+        return self.__num_entity_node_in_use
 
     @classmethod
     def fill_tree(cls,
@@ -73,7 +109,7 @@ class EntityBasedQuadTree(QuadTree):
         for entity in entities:
             self.insert(entity)
 
-    def set_free_entity_nodes(self, indexed_entities: List[Tuple[int, QuadEntityNode]]) -> None:
+    def _set_free_entity_nodes(self, indexed_entities: List[Tuple[int, QuadEntityNode]]) -> None:
 
         for ind, en in indexed_entities:
             owner_qnode = en.owner_node
@@ -83,17 +119,17 @@ class EntityBasedQuadTree(QuadTree):
             else:
                 prev_en_node = next(filter(
                     lambda en: en.next_index == ind,
-                    self.find_entity_node(qnode=owner_qnode)
+                    self._find_entity_node(qnode=owner_qnode)
                 ))
                 prev_en_node.next_index = en.next_index
 
-            en.set_free(self._free_entity_node_index)
+            en.set_free(self.__free_entity_node_index)
 
-            self._free_entity_node_index = ind
-            self._num_entity_node_in_use -= 1
+            self.__free_entity_node_index = ind
+            self.__num_entity_node_in_use -= 1
             owner_qnode.total_entity -= 1
 
-    def find_entity_node(
+    def _find_entity_node(
         self,
         qnode: Optional[QuadNode] = None,
         eid: Optional[UID] = None,
@@ -131,15 +167,15 @@ class EntityBasedQuadTree(QuadTree):
 
         return entity_nodes
 
-    def add_entity_node(self, node: QuadNode, entity_id: UID):
+    def _add_entity_node(self, node: QuadNode, entity_id: UID):
         old_index = node.first_child if node.total_entity > 0 else -1
 
         # update the node's total bounded entity
         node.total_entity += 1
 
-        self._num_entity_node_in_use += 1
+        self.__num_entity_node_in_use += 1
 
-        if self._free_entity_node_index == -1:
+        if self.__free_entity_node_index == -1:
             node.first_child = len(self.all_entity_node)
             self.all_entity_node.append(
                 QuadEntityNode(
@@ -149,13 +185,13 @@ class EntityBasedQuadTree(QuadTree):
                 ))
             return
 
-        free_entity_node = self.all_entity_node[self._free_entity_node_index]
+        free_entity_node = self.all_entity_node[self.__free_entity_node_index]
 
         # set the node's child to the free entity node
-        node.first_child = self._free_entity_node_index
+        node.first_child = self.__free_entity_node_index
 
         # reset the free entity node's index
-        self._free_entity_node_index = free_entity_node.next_index
+        self.__free_entity_node_index = free_entity_node.next_index
 
         # update the newly allocated entity node's attribute
         free_entity_node.update(entity_id=entity_id,
@@ -166,7 +202,7 @@ class EntityBasedQuadTree(QuadTree):
         """remove the entity with the given entity id from the tree"""
         if eid not in self.all_entity:
             raise ValueError(f"{eid} is not in the entity_list")
-        self.set_free_entity_nodes(self.find_entity_node(eid=eid, index=True))
+        self._set_free_entity_nodes(self._find_entity_node(eid=eid, index=True))
         self.all_entity = {
             uid: entity
             for uid, entity in self.all_entity.items() if uid != eid
@@ -196,14 +232,14 @@ class EntityBasedQuadTree(QuadTree):
         for this_eid, this_bbox in self.all_entity.items():
             intersecting_entities[this_eid] = set()
 
-            for en in self.find_entity_node(bbox=this_bbox):
+            for en in self._find_entity_node(bbox=this_bbox):
                 other_eid = en.entity_id
                 other_bbox = self.all_entity[other_eid]
 
                 if other_bbox is this_bbox:
                     continue
 
-                if this_bbox.is_intersecting_with(other_bbox):
+                if this_bbox.intersect(other_bbox):
                     intersecting_entities[this_eid].add(other_eid)
 
         return intersecting_entities
@@ -227,20 +263,20 @@ class EntityBasedQuadTree(QuadTree):
                 current_child = self.all_quad_node[current_index]
 
                 for eid, ebbox in entities:
-                    if quadrant.is_intersecting_with(ebbox):
-                        self.add_entity_node(current_child, eid)
+                    if quadrant.intersect(ebbox):
+                        self._add_entity_node(current_child, eid)
 
                 if (current_child.total_entity <= self.node_capacity
-                        or num_division > self.max_division):  # noqa
+                    or num_division > self.max_division):  # noqa
                     continue
 
-                indexed_entity_nodes = self.find_entity_node(current_child,
-                                                             index=True)
+                indexed_entity_nodes = self._find_entity_node(current_child,
+                                                              index=True)
                 bounded_entities = [(en.entity_id,
                                      self.all_entity[en.entity_id])
                                     for _, en in indexed_entity_nodes]
 
-                self.set_free_entity_nodes(indexed_entity_nodes)
+                self._set_free_entity_nodes(indexed_entity_nodes)
 
                 split_and_insert(
                     current_index,
@@ -267,7 +303,7 @@ class EntityBasedQuadTree(QuadTree):
 
         entity_bbox = BBox(*entity_bbox)
 
-        if not entity_bbox.is_inscribed_in(self.bbox):
+        if not entity_bbox.is_within(self.bbox):
             raise ValueError("entity's bbox is out of bound!")
 
         if isinstance(entity_id, type(None)):
@@ -279,15 +315,15 @@ class EntityBasedQuadTree(QuadTree):
 
         for qindex, qnode, qbbox in self.find_leaves(bbox=entity_bbox,
                                                      index=True):
-            self.add_entity_node(qnode, entity_id)
+            self._add_entity_node(qnode, entity_id)
             if qnode.total_entity <= self.node_capacity:
                 continue
 
-            indexed_entity_nodes = self.find_entity_node(qnode=qnode, index=True)
+            indexed_entity_nodes = self._find_entity_node(qnode=qnode, index=True)
             bounded_entities = [(en.entity_id, self.all_entity[en.entity_id])
                                 for _, en in indexed_entity_nodes]
 
-            self.set_free_entity_nodes(indexed_entity_nodes)
+            self._set_free_entity_nodes(indexed_entity_nodes)
             split_and_insert(qindex, qnode, qbbox, bounded_entities)
 
     def __bool__(self) -> bool:

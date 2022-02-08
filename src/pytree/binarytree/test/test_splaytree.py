@@ -27,7 +27,6 @@ def filled_splaytree(splaytree):
     splay_root.right.right = splay_node(value=14, parent=splay_root.right)
     splay_root.right.left = splay_node(value=11, parent=splay_root.right)
 
-    splaytree._size = 7
     return splaytree
 
 

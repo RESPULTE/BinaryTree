@@ -1,4 +1,5 @@
 from typing import Generic, Union, Tuple, List
+import pickle
 
 from ._type_hint import CT, BSN
 from .node import BST_Node
@@ -20,7 +21,6 @@ class BinaryTree(Generic[CT]):
             raise TypeError("Cannot instantiate base class.")
 
         self.root: BST_Node = self._node_type()
-        self._size = 0
 
     @property
     def dtype(self):
@@ -97,6 +97,17 @@ class BinaryTree(Generic[CT]):
             new_bst.insert(value)
         return new_bst
 
+    @classmethod
+    def load_pickle(cls, filename: str) -> 'BinaryTree':
+        tree = cls()
+        with open(filename, 'rb') as f:
+            tree.extend(pickle.load(f))
+        return tree
+
+    def pickle(self, filename: str) -> None:
+        with open(filename, 'wb') as f:
+            pickle.dump(self.traverse(), f, pickle.HIGHEST_PROTOCOL)
+
     def extend(self, values: List[CT]) -> None:
         '''generates a binary tree with all the values from a list'''
         for value in values:
@@ -111,8 +122,6 @@ class BinaryTree(Generic[CT]):
 
         if self.root.parent is not None:
             self.root = self.root.get_root()
-
-        self._size += 1
 
     def delete(self, value: CT) -> None:
         '''remove the node that contains the specified value from the tree'''
@@ -131,8 +140,6 @@ class BinaryTree(Generic[CT]):
 
         if self.root.parent is not None:
             self.root = self.root.get_root()
-
-        self._size -= 1
 
     def pop(self, value: CT = None, key: str = None) -> CT:
         '''get and delete the given value from the tree'''
@@ -171,7 +178,6 @@ class BinaryTree(Generic[CT]):
         self.root.left = None
         self.root.right = None
         self.root.value = None
-        self._size = 0
 
     def traverse(self, key: str = 'in') -> List[Union[BSN, CT]]:
         '''
@@ -374,7 +380,7 @@ class BinaryTree(Generic[CT]):
         self.delete(self[key])
 
     def __len__(self):
-        return self._size
+        return sum(1 for _ in self.traverse())
 
     def __iter__(self):
         yield from self.traverse()

@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 from ._r_node import R_Entity, R_Node, get_sibling, get_children
 
-from ..utils import BBox, is_inscribed, is_intersecting, generate_id
+from ..utils import BBox, generate_id
 from ..type_hints import UID
 
 
@@ -92,7 +92,7 @@ class RTree:
 
         entity_bbox = BBox(*entity_bbox)
 
-        if self.max_boundary and not entity_bbox.is_inscribed_in(self.max_boundary):
+        if self.max_boundary and not entity_bbox.is_within(self.max_boundary):
             raise ValueError("entity out of bound")
 
         if self.root.is_leaf:
@@ -191,11 +191,11 @@ class RTree:
         def traversal_query(node: R_Node, entity_ids: List[UID], tbbox: BBox) -> List[UID]:
             if node.is_branch:
                 for subbranch in get_children(node):
-                    if is_intersecting(subbranch.bbox, tbbox):
+                    if subbranch.bbox.intersect(tbbox):
                         traversal_query(subbranch, entity_ids, tbbox)
             else:
                 for entity in get_children(node):
-                    if is_intersecting(entity.bbox, tbbox):
+                    if entity.bbox.intersect(tbbox):
                         entity_ids.append(entity.uid)
 
             return entity_ids
@@ -235,7 +235,7 @@ class RTree:
             if isinstance(node, R_Entity):
                 continue
 
-            if is_inscribed(node.bbox, bbox):
+            if node.bbox.is_within(bbox):
                 to_process.extend(get_children(node))
                 candidates.append(node)
 
@@ -303,7 +303,7 @@ class RTree:
             self.insert(entity.uid, entity.bbox)
 
     def __repr__(self):
-        return f"to be implemented"
+        return "to be implemented"
 
     def __bool__(self):
         return self.all_entity != {}

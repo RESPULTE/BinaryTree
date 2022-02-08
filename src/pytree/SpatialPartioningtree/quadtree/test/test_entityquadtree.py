@@ -28,8 +28,8 @@ def test_set_branch(entityquadtree: EntityBasedQuadTree):
 def test_add_entity_node(entityquadtree: EntityBasedQuadTree):
     all_entity_node = entityquadtree.all_entity_node
     root = entityquadtree.root
-    entityquadtree.add_entity_node(root, 10)
-    entityquadtree.add_entity_node(root, 11)
+    entityquadtree._add_entity_node(root, 10)
+    entityquadtree._add_entity_node(root, 11)
 
     first_child = all_entity_node[root.first_child]
     second_child = all_entity_node[first_child.next_index]
@@ -83,15 +83,15 @@ def test_find_entity_node(entityquadtree: EntityBasedQuadTree):
 
     target_child = all_qnode[all_qnode[root.first_child].first_child]
     entityquadtree.all_entity[1] = BBox(1, 1, 1, 1)
-    entityquadtree.add_entity_node(target_child, 1)
+    entityquadtree._add_entity_node(target_child, 1)
 
-    found_entity_node = entityquadtree.find_entity_node(qnode=target_child)
+    found_entity_node = entityquadtree._find_entity_node(qnode=target_child)
     assert found_entity_node[0].entity_id == 1
 
-    found_entity_node = entityquadtree.find_entity_node(eid=1)
+    found_entity_node = entityquadtree._find_entity_node(eid=1)
     assert found_entity_node[0].entity_id == 1
 
-    found_entity_node = entityquadtree.find_entity_node(bbox=entityquadtree.bbox)
+    found_entity_node = entityquadtree._find_entity_node(bbox=entityquadtree.bbox)
     assert found_entity_node[0].entity_id == 1
 
 
@@ -108,7 +108,7 @@ def test_intersecting_entity_insertion(
         entityquadtree.insert(entity)
 
     for entity_id in entityquadtree.all_entity.keys():
-        assert len(entityquadtree.find_entity_node(eid=entity_id)) != 0
+        assert len(entityquadtree._find_entity_node(eid=entity_id)) != 0
 
 
 @pytest.mark.parametrize('entity', [
@@ -137,8 +137,8 @@ def test_entity_node_query(
     found_by_id = []
     found_by_bbox = []
     for entity_id, entity_bbox in entityquadtree.all_entity.items():
-        found_by_id.append(entityquadtree.find_entity_node(eid=entity_id))
-        found_by_bbox.append(entityquadtree.find_entity_node(bbox=entity_bbox))
+        found_by_id.append(entityquadtree._find_entity_node(eid=entity_id))
+        found_by_bbox.append(entityquadtree._find_entity_node(bbox=entity_bbox))
 
     for fbi in found_by_id:
         found_by_bbox.remove(fbi)

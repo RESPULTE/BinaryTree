@@ -24,6 +24,9 @@ class Tree(Protocol):
         '''generates a binary tree with all the values from a list'''
         pass
 
+    def extend(self, values: List[T]) -> None:
+        pass
+
     def insert(self, value: T) -> None:
         '''add a node with the given value into the tree'''
         pass
@@ -68,6 +71,9 @@ class Tree(Protocol):
 
     def find_min(self, node: Optional[bool] = False) -> Union[N, T]:
         '''get the node with the minimum value in the tree'''
+        pass
+
+    def pickle(self, filename: Optional[str] = None) -> None:
         pass
 
     def __add__(self, other: Union[T, 'Tree']) -> 'Tree':

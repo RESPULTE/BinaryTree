@@ -60,7 +60,6 @@ def filled_rbtree(rbtree, num_gen):
     rb_root.right.right = rb_node(value=14, parent=rb_root.right)
     rb_root.right.left = rb_node(value=11, parent=rb_root.right)
 
-    rbtree._size = 7
     return rbtree
 
 

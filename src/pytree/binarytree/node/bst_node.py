@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
-from tkinter import N
-from typing import Generic, List, Tuple, Union
+from typing import Generic, List, Union
 
 from .._type_hint import CT
 

@@ -1,6 +1,4 @@
-from collections import namedtuple
 from typing import List, Optional, Tuple
-
 
 from .type_hints import Num, Point, UID
 
@@ -73,13 +71,13 @@ class BBox:
             type(self)(cx, cy, w, h),
         ]
 
-    def is_inscribed_in(self, other: 'BBox') -> float:
+    def is_within(self, other: 'BBox') -> float:
         return (other.x <= self.x and
                 other.y <= self.y and
                 other.x + other.w >= self.x + self.w and
                 other.y + other.h >= self.y + self.h)
 
-    def is_intersecting_with(self, other: 'BBox') -> bool:
+    def intersect(self, other: 'BBox') -> bool:
         return (self.x < other.x + other.w and
                 self.x + self.w > other.x and
                 self.y < other.y + other.h and

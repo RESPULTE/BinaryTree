@@ -1,4 +1,3 @@
-from .entityquadtree import EntityBasedQuadTree
+from .entityquadtree import QuadEntityNode, EntityBasedQuadTree
 from .imagequadtree import ImageBasedQuadTree
-from ._quadtree import QuadTree
-from ._quadnode import QuadNode, QuadEntityNode
+from ._quadtree import BaseQuadTree, QuadNode

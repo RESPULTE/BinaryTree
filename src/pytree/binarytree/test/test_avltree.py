@@ -75,7 +75,6 @@ def filled_avltree(avltree: AVLTree):
     avl_root.right.right = avl_node(value=14, parent=avl_root.right)
     avl_root.right.left = avl_node(value=11, parent=avl_root.right)
 
-    avltree._size = 7
     return avltree
 
 
