@@ -60,6 +60,7 @@ def decompress(
     huffman_tree: Huffman_Node,
     asString: Optional[bool] = False
 ) -> Union[str, List[Any]]:
+
     current_node = huffman_tree
     decoded_data = []
     curr_tag = ""
