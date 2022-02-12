@@ -1,5 +1,5 @@
-from .Node import RBT_Node, AVL_Node, Splay_Node, BST_Node
-from ._tree import BinaryTree
+from pytree.Binarytree.Node import RBT_Node, AVL_Node, Splay_Node, BST_Node
+from pytree.Binarytree._tree import BinaryTree
 
 __all__ = ['RBTree', 'BSTree', 'AVLTree', 'SplayTree']
 

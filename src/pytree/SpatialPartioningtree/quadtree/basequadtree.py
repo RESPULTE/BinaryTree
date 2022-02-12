@@ -1,7 +1,6 @@
 from typing import Optional, List, Union, Tuple
 
-from ..utils import BBox
-from ..type_hints import UID
+from pytree.SpatialPartioningtree.utils import BBox
 
 
 class QuadNode:
@@ -98,13 +97,13 @@ class BaseQuadTree:
         """returns the first quad node, for conveience"""
         return self.all_quad_node[0]
 
-    def _get_bbox(self, qnode: QuadNode) -> Tuple[int, BBox]:
+    def _get_bbox(self, qnode: QuadNode, index: Optional[bool] = False) -> BBox:
         """
         returns the bounding box of a quad node
         depending on the position of the quad node in the quad tree
         """
         if qnode == self.root:
-            return (0, self.bbox)
+            return (0, self.bbox) if index else self.bbox
 
         qnode_index = self.all_quad_node.index(qnode)
         quadrants = [(qnode_index - 1) % 4]
@@ -126,7 +125,7 @@ class BaseQuadTree:
                 if ind == quadrant_index:
                     tbbox = quad
 
-        return (qnode_index, tbbox)
+        return (qnode_index, tbbox) if index else tbbox
 
     def _find_quad_node(
         self,
@@ -181,7 +180,7 @@ class BaseQuadTree:
 
         if qnode or (not qnode and not bbox):
             qnode = qnode if qnode is not None else self.root
-            qindex, qbbox = self._get_bbox(qnode=qnode)
+            qindex, qbbox = self._get_bbox(qnode=qnode, index=True)
 
         if bbox:
             qindex, _, qbbox = self._find_quad_node(bbox=bbox, index=True)

@@ -1,8 +1,8 @@
 from typing import List, Tuple
 
-from .kdt_node import KDT_Node
-from ..utils import BBox, Point
-from ...Binarytree._tree import BinaryTree
+from pytree.SpatialPartioningtree.KDtree.kdt_node import KDT_Node
+from pytree.SpatialPartioningtree.utils import BBox, Point
+from pytree.Binarytree._tree import BinaryTree
 
 
 class KDTree(BinaryTree):

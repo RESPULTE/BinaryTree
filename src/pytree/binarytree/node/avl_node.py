@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
 
-from .._type_hint import CT
-from .bst_node import BST_Node
+from pytree.Binarytree._type_hint import CT
+from pytree.Binarytree.Node.bst_node import BST_Node
 
 
-@dataclass(order=True)
+@dataclass(order=True, slots=True)
 class AVL_Node(BST_Node):
     '''
     The node class for the AVL tree

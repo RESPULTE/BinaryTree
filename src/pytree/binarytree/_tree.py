@@ -1,8 +1,8 @@
 from typing import Generic, Union, Tuple, List
 import pickle
 
-from ._type_hint import CT, BSN
-from .Node import BST_Node
+from pytree.Binarytree._type_hint import CT, BSN
+from pytree.Binarytree.Node import BST_Node
 
 
 class BinaryTree(Generic[CT]):

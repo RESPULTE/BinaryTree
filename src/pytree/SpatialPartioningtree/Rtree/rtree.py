@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple, Union
 
-from ..utils import BBox, generate_id, within_radius
-from ..type_hints import UID, Point
+from pytree.SpatialPartioningtree.utils import BBox, generate_id, within_radius
+from pytree.SpatialPartioningtree.type_hints import UID, Point
 
 # tons of optimisation to be done
 # the allocation of the nodes after the node splitting
@@ -371,7 +371,6 @@ class RTree:
         self.__traversal_split(rnode)
 
     def __traversal_split(self, rnode: R_Node) -> None:
-        # change to the quadratic solution for better result
         all_children = get_children(rnode)
         all_children.sort(key=lambda e: (e.bbox.x, e.bbox.y))
 
@@ -397,7 +396,6 @@ class RTree:
 
             self.__reallocate_child(target_rnode, child)
 
-        # might remove
         parent.resize(node_1.bbox, node_2.bbox)
         self.__check_insertion(parent)
 
@@ -413,14 +411,13 @@ class RTree:
         p_rnode.total_child += 1
         p_rnode.resize(child.bbox)
 
-    # clean up
     def __split_rnode(self, rnode: R_Node) -> Tuple[R_Node, R_Node]:
         if not rnode.parent:
-            new_root = R_Node(child=rnode, bbox=rnode.bbox, total_child=2)
+            new_root = R_Node(child=rnode, bbox=rnode.bbox, total_child=1)
             rnode.parent = new_root
             self.root = new_root
-        else:
-            rnode.parent.total_child += 1
+
+        rnode.parent.total_child += 1
 
         new_sibling = R_Node(sibling=rnode.sibling,
                              parent=rnode.parent)
@@ -435,8 +432,6 @@ class RTree:
 
         return rnode, new_sibling
 
-    # clean up
-
     def __set_node_free(self, node: Union[R_Entity, R_Node]) -> None:
         parent_rnode = node.parent
 
@@ -447,10 +442,10 @@ class RTree:
             sibling.sibling = node.sibling
 
         if isinstance(node, R_Entity):
-            node.set_free(self._free_entity)
+            node.set_free(next_free_renode=self._free_entity)
             self._free_entity = node
         else:
-            node.set_free(self._free_node)
+            node.set_free(next_free_r_node=self._free_node)
             self._free_node = node
 
         parent_rnode.total_child -= 1

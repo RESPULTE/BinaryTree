@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 
-from .type_hints import Num, Point, UID
+from pytree.SpatialPartioningtree.type_hints import Num, Point, UID
 
 
 class BBox:

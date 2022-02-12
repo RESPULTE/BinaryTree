@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Union
 
-from .._type_hint import CT
-from .bst_node import BST_Node
+from pytree.Binarytree._type_hint import CT
+from pytree.Binarytree.Node.bst_node import BST_Node
 
 
-@dataclass(order=True)
+@dataclass(order=True, slots=True)
 class RBT_Node(BST_Node):
     '''
     node for the RBT class (Red-Black Tree)

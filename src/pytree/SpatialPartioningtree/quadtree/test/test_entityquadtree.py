@@ -9,22 +9,6 @@ def entityquadtree():
 
 
 @pytest.mark.dependency()
-def test_set_branch(entityquadtree: EntityQuadTree):
-    root = entityquadtree.root
-    entityquadtree._BaseQuadTree__set_branch(root, 0)
-    tree_size = entityquadtree.num_quad_node
-    for i in range(4):
-        assert root.first_child + i < tree_size
-
-        child = entityquadtree.all_quad_node[root.first_child + i]
-        assert child.parent_index == 0
-        assert child.is_leaf
-
-    assert (root.first_child - 1) % 4 == 0
-    assert root.is_branch
-
-
-@pytest.mark.dependency()
 def test_add_entity_node(entityquadtree: EntityQuadTree):
     all_entity_node = entityquadtree.all_entity_node
     root = entityquadtree.root
@@ -44,12 +28,11 @@ def test_add_entity_node(entityquadtree: EntityQuadTree):
     assert second_child.entity_id == 10
 
 
-@pytest.mark.dependency(depends=["test_set_branch"])
 def test_free_qnode_utilization(entityquadtree: EntityQuadTree):
-    entityquadtree._BaseQuadTree__set_branch(entityquadtree.root, 0)
+    entityquadtree._set_branch(entityquadtree.root, 0)
 
     first_child_index = entityquadtree.root.first_child
-    entityquadtree._BaseQuadTree__set_branch(entityquadtree.all_quad_node[first_child_index], first_child_index)
+    entityquadtree._set_branch(entityquadtree.all_quad_node[first_child_index], first_child_index)
 
     entityquadtree._BaseQuadTree__set_free_quad_node(first_child_index)
 
@@ -59,27 +42,13 @@ def test_free_qnode_utilization(entityquadtree: EntityQuadTree):
     assert entityquadtree._free_quad_node_index == -1
 
 
-@pytest.mark.dependency(depends=["test_set_branch"])
-def test_find_leaves(entityquadtree: EntityQuadTree):
-    root = entityquadtree.root
-    all_qnode = entityquadtree.all_quad_node
-
-    entityquadtree._BaseQuadTree__set_branch(root, 0)
-    entityquadtree._BaseQuadTree__set_branch(all_qnode[root.first_child], 1)
-    entityquadtree._BaseQuadTree__set_branch(all_qnode[root.first_child + 1], 2)
-
-    assert len(entityquadtree._find_leaves(qnode=entityquadtree.root)) == 10
-    assert len(entityquadtree._find_leaves(bbox=entityquadtree.bbox)) == 10
-
-
-@pytest.mark.dependency(depends=["test_set_branch", "test_add_entity_node"])
 def test_find_entity_node(entityquadtree: EntityQuadTree):
     root = entityquadtree.root
     all_qnode = entityquadtree.all_quad_node
 
-    entityquadtree._BaseQuadTree__set_branch(root, 0)
-    entityquadtree._BaseQuadTree__set_branch(all_qnode[root.first_child], 1)
-    entityquadtree._BaseQuadTree__set_branch(all_qnode[all_qnode[root.first_child].first_child], 5)
+    entityquadtree._set_branch(root, 0)
+    entityquadtree._set_branch(all_qnode[root.first_child], 1)
+    entityquadtree._set_branch(all_qnode[all_qnode[root.first_child].first_child], 5)
 
     target_child = all_qnode[all_qnode[root.first_child].first_child]
     entityquadtree.all_entity[1] = BBox(1, 1, 1, 1)
@@ -136,42 +105,6 @@ def test_entity_query(
         entityquadtree.insert(entity)
 
     assert sum(1 for _ in entityquadtree.query_intersection()) == num_intersection
-
-
-@pytest.mark.parametrize('entities', [
-    [(100, 100, 10, 10), (90, 90, 20, 20)],
-    [(0, 0, 100, 100), (0, 90, 50, 50), (90, 0, 60, 60), (0, 10, 10, 10)]
-], ids=['normal', '> node_capacity'])
-def test_clean_up(
-    entityquadtree: EntityQuadTree,
-    entities: List[Tuple[int, int, int, int]]
-):
-    for entity in entities:
-        entityquadtree.insert(entity)
-
-    for entity_id in entityquadtree.all_entity.keys():
-        entityquadtree.delete(eid=entity_id)
-
-    entityquadtree.clean_up()
-
-    assert entityquadtree.num_entity_node_in_use == 0
-    assert entityquadtree.num_quad_node_in_use == 1
-
-
-@pytest.mark.dependency(depends=["test_set_branch"])
-def test_tree_height(entityquadtree: EntityQuadTree):
-    all_qnode = entityquadtree.all_quad_node
-
-    entityquadtree._BaseQuadTree__set_branch(entityquadtree.root, 0)
-    qnode, qindex, height = all_qnode[1], 1, 1
-
-    while height < 10:
-        entityquadtree._BaseQuadTree__set_branch(qnode, qindex)
-        qnode = all_qnode[qnode.first_child]
-        qindex += 4
-        height += 1
-
-    assert entityquadtree.depth == height
 
 
 @pytest.mark.dependency(depends=["test_intersecting_entity_insertion"])

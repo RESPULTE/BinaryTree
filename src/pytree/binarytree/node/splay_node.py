@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Union
 
-from .._type_hint import CT
-from .bst_node import BST_Node
+from pytree.Binarytree._type_hint import CT
+from pytree.Binarytree.Node.bst_node import BST_Node
 
 
-@dataclass(order=True)
+@dataclass(order=True, slots=True)
 class Splay_Node(BST_Node):
     '''
     - the node class for the splay tree

@@ -2,10 +2,9 @@ from PIL import Image, ImageDraw
 from typing import Optional, Tuple
 import numpy as np
 
-from ..type_hints import RGB
-from ..utils import BBox
-
-from ._quadtree import BaseQuadTree, QuadNode
+from pytree.SpatialPartioningtree.Quadtree.basequadtree import BaseQuadTree, QuadNode
+from pytree.SpatialPartioningtree.type_hints import RGB
+from pytree.SpatialPartioningtree.utils import BBox
 
 
 def get_average_rgb(img_arr: np.ndarray) -> Tuple[RGB, float]:

@@ -1,9 +1,8 @@
 from typing import Iterable, Optional, List, Dict, Set, Tuple, Union
 
-from ..utils import BBox, generate_id, within_radius
-from ..type_hints import UID, Point
-
-from ._quadtree import BaseQuadTree, QuadNode
+from pytree.SpatialPartioningtree.Quadtree.basequadtree import BaseQuadTree, QuadNode
+from pytree.SpatialPartioningtree.utils import BBox, generate_id, within_radius
+from pytree.SpatialPartioningtree.type_hints import UID, Point
 
 
 class QuadEntityNode:

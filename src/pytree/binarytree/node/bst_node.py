@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
 from typing import Generic, List, Union
 
-from .._type_hint import CT
+from pytree.Binarytree._type_hint import CT
 
 
-@dataclass(order=True)
+@dataclass(order=True, slots=True)
 class BST_Node(Generic[CT]):
     '''
     - a basic binary search tree node
@@ -81,6 +81,9 @@ class BST_Node(Generic[CT]):
     @property
     def is_branch(self) -> bool:
         return self.right or self.left
+
+    def update(self, **kwargs) -> None:
+        [setattr(self, k, v) for k, v in kwargs.items()]
 
     def traverse_node(self, key: str = 'in') -> List['BST_Node']:
         '''
@@ -383,7 +386,13 @@ class BST_Node(Generic[CT]):
             else:
 
                 # swap identity with the child node
-                self.__dict__ = child_node.__dict__
+                self.update(
+                    parent=child_node.parent,
+                    left=child_node.left,
+                    right=child_node.right,
+                    value=child_node.value
+                )
+
                 if child_node.right:
                     child_node.right.parent = self
                 if child_node.left:

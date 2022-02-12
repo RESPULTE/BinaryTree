@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from typing import Tuple, Union, List
 from heapq import heappop, heappush
 
-from ...Binarytree import BST_Node
-from ..utils import Point, BBox, get_closest
+from pytree.SpatialPartioningtree.utils import Point, BBox, get_closest
+from pytree.Binarytree import BST_Node
 
 
 @dataclass
