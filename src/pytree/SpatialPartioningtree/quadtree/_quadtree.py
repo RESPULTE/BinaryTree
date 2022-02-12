@@ -98,7 +98,7 @@ class BaseQuadTree:
         """returns the first quad node, for conveience"""
         return self.all_quad_node[0]
 
-    def get_bbox(self, qnode: QuadNode) -> Tuple[int, BBox]:
+    def _get_bbox(self, qnode: QuadNode) -> Tuple[int, BBox]:
         """
         returns the bounding box of a quad node
         depending on the position of the quad node in the quad tree
@@ -128,7 +128,7 @@ class BaseQuadTree:
 
         return (qnode_index, tbbox)
 
-    def find_quad_node(
+    def _find_quad_node(
         self,
         bbox: BBox,
         index: Optional[bool] = False
@@ -137,8 +137,8 @@ class BaseQuadTree:
         returns a quad node that completely encompasses a given bbox
         the extra index paramter is also for convenience sake
         """
-        to_process = [(0, self.bbox)]
-        candidates = []
+        to_process: List[Tuple[int, BBox]] = [(0, self.bbox)]
+        candidates: List[Tuple[int, QuadNode, BBox]] = []
 
         while to_process:
 
@@ -159,11 +159,10 @@ class BaseQuadTree:
                 if bbox.intersect(quadrant) and bbox.is_within(quadrant):
                     to_process.append((qnode.first_child + ind, quadrant))
 
-        target_qnode = min(candidates,
-                           key=lambda qnode: qnode[2].w * qnode[2].h)
+        target_qnode = min(candidates, key=lambda qnode: qnode[2].w * qnode[2].h)
         return target_qnode if index else (target_qnode[1], target_qnode[2])
 
-    def find_leaves(
+    def _find_leaves(
         self,
         qnode: Optional[QuadNode] = None,
         bbox: Optional[BBox] = None,
@@ -182,10 +181,10 @@ class BaseQuadTree:
 
         if qnode or (not qnode and not bbox):
             qnode = qnode if qnode is not None else self.root
-            qindex, qbbox = self.get_bbox(qnode=qnode)
+            qindex, qbbox = self._get_bbox(qnode=qnode)
 
         if bbox:
-            qindex, _, qbbox = self.find_quad_node(bbox=bbox, index=True)
+            qindex, _, qbbox = self._find_quad_node(bbox=bbox, index=True)
 
         to_process = [(qindex, qbbox)]
 
@@ -200,6 +199,7 @@ class BaseQuadTree:
                 continue
 
             if qnode.is_leaf:
+                # refactor: check at the end, filter at end
                 quad_data = (qindex, qnode, qbbox) if index else (qnode, qbbox)
                 bounded_leaves.append(quad_data)
                 continue
@@ -227,7 +227,7 @@ class BaseQuadTree:
                 # -> or else it'll mess up future node allocations
                 cindex = qnode.first_child
                 if (sum(clean_unused_qnode(self.all_quad_node[cindex + i]) for i in range(4)) == 4):
-                    self.set_free_quad_node(cindex)
+                    self.__set_free_quad_node(cindex)
 
                     if qnode == self.root:
                         qnode.first_child = 1
@@ -237,7 +237,7 @@ class BaseQuadTree:
 
         clean_unused_qnode(self.root)
 
-    def set_branch(self, qnode: QuadNode, qindex: int):
+    def _set_branch(self, qnode: QuadNode, qindex: int) -> None:
         if qnode.is_branch:
             raise ValueError("cannot set a branch node to branch again")
 
@@ -271,7 +271,7 @@ class BaseQuadTree:
         # or another node's index
         self._free_quad_node_index = next_free_quad_node_index
 
-    def set_free_quad_node(self, qindex: int) -> None:
+    def __set_free_quad_node(self, qindex: int) -> None:
         if (qindex - 1) % 4 != 0:
             raise ValueError(f"the liberation should happen to the \
                   first child not the '{(qindex - 1) % 4}' child")

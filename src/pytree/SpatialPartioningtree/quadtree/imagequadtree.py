@@ -54,7 +54,7 @@ class ImageBasedQuadTree(BaseQuadTree):
                 qnode.update(first_child=avg_color, total_entity=1)
                 return
 
-            self.set_branch(qnode, qindex)
+            self._set_branch(qnode, qindex)
 
             for ind, quadrant in enumerate(bbox.split(roundoff=True)):
                 child_index = qnode.first_child + ind
@@ -70,7 +70,7 @@ class ImageBasedQuadTree(BaseQuadTree):
 
         draw = ImageDraw.Draw(self.img)
 
-        for leaf, bbox in self.find_leaves():
+        for leaf, bbox in self._find_leaves():
             x, y, w, h = bbox
             draw.rectangle((x, y, x + w, y + h),
                            fill=leaf.first_child,
@@ -86,13 +86,15 @@ class ImageBasedQuadTree(BaseQuadTree):
         self.img.save(f"{filename}.{format}")
 
     def show(self):
+        if self.img is None:
+            raise ValueError("No image to display")
         self.img.show()
 
     def __bool__(self):
         return self.img is not None
 
     def __iter__(self):
-        yield from self.find_leaves()
+        yield from [(e.first_child, bbox) for e, bbox in self._find_leaves()]
 
     def __str__(self):
         return f"{type(self).__name__}( \

@@ -19,7 +19,7 @@ class KDTree(BinaryTree):
                 any(not isinstance(c, (float, int)) for c in point):
             raise ValueError(f"{type(self).__name__} only accepts tuple of int/float")
         super().insert(point)
-        self.bbox.expand(point)
+        self.bbox.expand_ip(point)
 
     # might abstract out to the bbox class
     def delete(self, point: Point) -> None:
