@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw
 from typing import Optional, Tuple
 import numpy as np
+import os
 
 from pytree.SpatialPartioningtree.Quadtree.basequadtree import BaseQuadTree, QuadNode
 from pytree.SpatialPartioningtree.type_hints import RGB
@@ -76,13 +77,14 @@ class ImageBasedQuadTree(BaseQuadTree):
                            outline=outline)
 
     def save(self,
-             filename: Optional[str] = None,
+             filepath: Optional[str] = None,
              format: Optional[str] = 'png') -> None:
         if not self.img:
             raise Exception("image hasn't been compressed")
-        if not filename:
-            filename = self.img_name
-        self.img.save(f"{filename}.{format}")
+        if not filepath:
+            filepath = self.img_name
+
+        self.img.save(f"{os.path.join(*filepath.split('/'))}.{format}")
 
     def show(self):
         if self.img is None:
