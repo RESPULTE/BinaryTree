@@ -52,7 +52,7 @@ def test_build_tree_from_dataset(data):
 @pytest.mark.parametrize(
     'bitcode, dtype, expected',
     [
-        ("11(A)(C)1(E)1(B)(D)", str, {'A', 'C', 'E', 'B', 'D'}),
+        ("11(A(C1(E1(B(D", str, {'A', 'C', 'E', 'B', 'D'}),
         ("11(111)1(888)(911)1(420)(69)", int, {111, 888, 911, 420, 69})
     ],
     ids=['str', 'int']

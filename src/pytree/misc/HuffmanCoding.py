@@ -2,16 +2,13 @@ from typing import Dict, Type, TypeVar, Union, List, Tuple, NewType, Deque, Bina
 from collections import Counter, deque
 from dataclasses import dataclass
 from bisect import insort
-import sys
 
 ValidDataType = TypeVar('ValidDataType', str, List[int], List[float])
 ValidDataset = TypeVar('ValidDataset', str, list, tuple)
 BitCode = NewType("BitCode", str)
 
-this = sys.modules[__name__]
-
-this.__SEP = b'\$'
-this.__SUPPORTED_DTYPE = (str, int, float)
+SUPPORTED_DTYPE = (str, int, float)
+DIV = b'\$'
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,10 +27,12 @@ class DecompressionError(Exception):
 
 
 def compress(dataset: Union[str, list, tuple], dtype: Type) -> Tuple[str, BitCode]:
+    global SUPPORTED_DTYPE
+
     if not isinstance(dataset, (str, list, tuple)) or not bool(dataset):
         raise TypeError("dataset must be a non-empty list/str/tuple")
 
-    if dtype not in this.__SUPPORTED_DTYPE:
+    if dtype not in SUPPORTED_DTYPE:
         raise TypeError(f" datatype not supported '{dtype}'")
 
     huffman_tree = _build_tree_from_dataset(Counter(dataset).most_common())
@@ -66,35 +65,43 @@ def decompress(huffman_string: str, encoded_data: BitCode, dtype: ValidDataType)
                 continue
 
     except Exception as e:
-        raise DecompressionError(f"Unknown error has occured: {e}")
+        raise DecompressionError(f"Unknown error has occured -> {e}")
 
     else:
         return "".join(decoded_data) if dtype is str else decoded_data
 
 
 def dump(dataset: Union[str, list, tuple], file: BinaryIO, dtype: ValidDataType) -> None:
+    global DIV
     huffman_string, encoded_data = compress(dataset, dtype)
-    datatype = dtype.__name__.encode('utf-8')
-    header = huffman_string.encode('utf-8')
-    datapack = encoded_data.encode('utf-8')
+    dtype = dtype.__name__
 
-    file.write(datatype + this.__SEP + header + this.__SEP + datapack)
+    if not file.name.endswith('.txt'):
+        dtype = dtype.encode('utf-8')
+        header = huffman_string.encode('utf-8')
+        datapack = encoded_data.encode('utf-8')
+
+    file.write(dtype + DIV + header + DIV + datapack)
 
 
 def load(file: BinaryIO) -> None:
+    global SUPPORTED_DTYPE, DIV
     try:
-        datatype, raw_header, raw_datapack = file.read().split(this.__SEP)
+        dtype, raw_header, raw_datapack = file.read().split(DIV)
     except:
         raise ValueError(
             "Could not read the given file, make sure it has been encoded with the module"
         )
 
-    dtype = eval(datatype.decode('utf-8'))
-    if dtype not in this.__SUPPORTED_DTYPE:
+    if not file.name.endswith('.txt'):
+        dtype = dtype.decode('utf-8')
+        encoded_data = raw_datapack.decode('utf-8')
+        huffman_string = raw_header.decode('utf-8')
+
+    dtype = eval(dtype)
+    if dtype not in SUPPORTED_DTYPE:
         raise TypeError(f" datatype not supported '{dtype}'")
 
-    encoded_data = raw_datapack.decode('utf-8')
-    huffman_string = raw_header.decode('utf-8')
     return decompress(huffman_string, encoded_data, dtype)
 
 
@@ -114,29 +121,41 @@ def _build_tree_from_dataset(quantised_dataset: List[Tuple[ValidDataType, int]])
 
 
 def _build_tree_from_bitcode(huffmanString: BitCode, dtype: ValidDataType) -> Huffman_Node:
-    huffmanString: Deque[str] = deque(list(huffmanString))
+    to_process: Deque[str] = deque(list(huffmanString))
 
-    def traversal_builder(next_bit: str):
+    def traversal_builder_for_nonStringVal(next_bit: str, to_process: Deque[str]):
         if next_bit == "(":
-
             data = ""
             current_index = 0
-            while huffmanString[0] != ")":
-                data += huffmanString.popleft()
+            while to_process[0] != ")":
+                data += to_process.popleft()
                 current_index += 1
-            huffmanString.popleft()
-
+            to_process.popleft()
             return dtype(data)
 
-        left_child = traversal_builder(huffmanString.popleft())
-        right_child = traversal_builder(huffmanString.popleft())
+        left_child = traversal_builder_for_nonStringVal(to_process.popleft(), to_process)
+        right_child = traversal_builder_for_nonStringVal(to_process.popleft(), to_process)
         return Huffman_Node(left=left_child, right=right_child)
 
-    return traversal_builder(huffmanString.popleft())
+    def traversal_builder_for_stringVal(next_bit: str, to_process: Deque[str]):
+        if next_bit == "(":
+            return to_process.popleft()
+
+        left_child = traversal_builder_for_stringVal(to_process.popleft(), to_process)
+        right_child = traversal_builder_for_stringVal(to_process.popleft(), to_process)
+        return Huffman_Node(left=left_child, right=right_child)
+
+    next_bit = to_process.popleft()
+    if dtype != str:
+        return traversal_builder_for_nonStringVal(next_bit, to_process)
+
+    return traversal_builder_for_stringVal(next_bit, to_process)
 
 
 def _generate_bitcode(huffman_tree: Huffman_Node) -> BitCode:
     if not isinstance(huffman_tree, Huffman_Node):
+        if isinstance(huffman_tree, str):
+            return f"({huffman_tree}"
         return f"({huffman_tree})"
 
     huffmanString = "1"
