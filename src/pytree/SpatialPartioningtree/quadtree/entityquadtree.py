@@ -9,10 +9,7 @@ class QuadEntityNode:
 
     __slots__ = ["next_index", "entity_id", "owner_node"]
 
-    def __init__(self,
-                 entity_id: UID = -1,
-                 next_index: int = -1,
-                 owner_node: QuadNode = None):
+    def __init__(self, entity_id: UID = -1, next_index: int = -1, owner_node: QuadNode = None):
         self.entity_id = entity_id
         self.next_index = next_index
         self.owner_node = owner_node
@@ -43,7 +40,6 @@ class QuadEntityNode:
 
 
 class EntityQuadTree(BaseQuadTree):
-
     def __init__(
         self,
         bbox: BBox,
@@ -80,11 +76,9 @@ class EntityQuadTree(BaseQuadTree):
         return self.__num_entity_node_in_use
 
     @classmethod
-    def fill_tree(cls,
-                  entities: List[Union[BBox, Tuple[BBox, UID]]],
-                  node_capacity: int = 4,
-                  auto_id: bool = True
-                  ) -> 'EntityQuadTree':
+    def fill_tree(
+        cls, entities: List[Union[BBox, Tuple[BBox, UID]]], node_capacity: int = 4, auto_id: bool = True
+    ) -> "EntityQuadTree":
         eqtree = cls(node_capacity=node_capacity, auto_id=auto_id)
 
         if any(len(entity) == 2 for entity in entities):
@@ -108,10 +102,7 @@ class EntityQuadTree(BaseQuadTree):
         for entity in entities:
             self.insert(entity)
 
-    def insert(self,
-               entity_bbox: BBox,
-               entity_id: Optional[UID] = None) -> None:
-
+    def insert(self, entity_bbox: BBox, entity_id: Optional[UID] = None) -> None:
         def split_and_insert(
             qindex: int,
             qnode: QuadNode,
@@ -130,15 +121,11 @@ class EntityQuadTree(BaseQuadTree):
                     if quadrant.intersect(ebbox):
                         self.__add_entity_node(current_child, eid)
 
-                if (current_child.total_entity <= self.node_capacity
-                    or num_division > self.max_division):  # noqa
+                if current_child.total_entity <= self.node_capacity or num_division > self.max_division:  # noqa
                     continue
 
-                indexed_entity_nodes = self._find_entity_node(qnode=current_child,
-                                                              index=True)
-                bounded_entities = [(en.entity_id,
-                                     self.all_entity[en.entity_id])
-                                    for _, en in indexed_entity_nodes]
+                indexed_entity_nodes = self._find_entity_node(qnode=current_child, index=True)
+                bounded_entities = [(en.entity_id, self.all_entity[en.entity_id]) for _, en in indexed_entity_nodes]
 
                 self.__set_free_entity_nodes(indexed_entity_nodes)
 
@@ -159,7 +146,8 @@ class EntityQuadTree(BaseQuadTree):
         if self.depth > self.max_depth:
             raise ValueError(
                 f"Quadtree's depth has exceeded the maximum depth of {self.max_depth}\n \
-                  current quadtree's depth: {self.depth}")
+                  current quadtree's depth: {self.depth}"
+            )
 
         if not self.cleaned:
             self.clean_up()
@@ -177,15 +165,13 @@ class EntityQuadTree(BaseQuadTree):
 
         self.all_entity[entity_id] = entity_bbox
 
-        for qindex, qnode, qbbox in self._find_leaves(bbox=entity_bbox,
-                                                      index=True):
+        for qindex, qnode, qbbox in self._find_leaves(bbox=entity_bbox, index=True):
             self.__add_entity_node(qnode, entity_id)
             if qnode.total_entity <= self.node_capacity:
                 continue
 
             indexed_entity_nodes = self._find_entity_node(qnode=qnode, index=True)
-            bounded_entities = [(en.entity_id, self.all_entity[en.entity_id])
-                                for _, en in indexed_entity_nodes]
+            bounded_entities = [(en.entity_id, self.all_entity[en.entity_id]) for _, en in indexed_entity_nodes]
 
             self.__set_free_entity_nodes(indexed_entity_nodes)
             split_and_insert(qindex, qnode, qbbox, bounded_entities)
@@ -195,10 +181,7 @@ class EntityQuadTree(BaseQuadTree):
         if eid not in self.all_entity:
             raise ValueError(f"{eid} is not in the entity_list")
         self.__set_free_entity_nodes(self._find_entity_node(eid=eid, index=True))
-        self.all_entity = {
-            uid: entity
-            for uid, entity in self.all_entity.items() if uid != eid
-        }
+        self.all_entity = {uid: entity for uid, entity in self.all_entity.items() if uid != eid}
         self.cleaned = False
 
     def clear(self, rm_cached=False) -> None:
@@ -213,9 +196,7 @@ class EntityQuadTree(BaseQuadTree):
         self.clean_up()
 
     def query_intersection(
-        self,
-        bbox: Optional[BBox] = None,
-        pairing: Optional[bool] = False
+        self, bbox: Optional[BBox] = None, pairing: Optional[bool] = False
     ) -> Union[Dict[UID, Set[UID]], Set[UID]]:
 
         bbox = self.bbox if not bbox else BBox(*bbox)
@@ -243,10 +224,7 @@ class EntityQuadTree(BaseQuadTree):
 
         return intersecting_entities
 
-    def query_entity(self,
-                     bbox: Optional[BBox] = None,
-                     radius: Optional[Tuple[Point, float]] = None
-                     ) -> List[UID]:
+    def query_entity(self, bbox: Optional[BBox] = None, radius: Optional[Tuple[Point, float]] = None) -> List[UID]:
         if not bbox and not radius:
             return list(self.all_entity.keys())
 
@@ -265,12 +243,9 @@ class EntityQuadTree(BaseQuadTree):
             return found_entities
 
         return [
-            eid for eid in found_entities
-            if within_radius(
-                origin_point=radius[0],
-                radius=radius[1],
-                bbox=self.all_entity[eid]
-            )
+            eid
+            for eid in found_entities
+            if within_radius(origin_point=radius[0], radius=radius[1], bbox=self.all_entity[eid])
         ]
 
     def _find_entity_node(
@@ -289,14 +264,10 @@ class EntityQuadTree(BaseQuadTree):
         """
         conditions = [c is not None for c in [qnode, eid, bbox]]
         if not any(conditions):
-            raise ValueError(
-                "at least one or the other is required, 'qnode' or 'eid'"
-            )
+            raise ValueError("at least one or the other is required, 'qnode' or 'eid'")
 
         if all(conditions) or sum(1 for c in conditions if bool(c)) > 1:
-            raise ValueError(
-                "only one or the other is allowed, 'qnode' or 'eid'"
-            )
+            raise ValueError("only one or the other is allowed, 'qnode' or 'eid'")
 
         ebbox = self.all_entity[eid] if eid is not None else bbox
         qnode = self._find_quad_node(bbox=ebbox)[0] if not qnode else qnode
@@ -312,10 +283,7 @@ class EntityQuadTree(BaseQuadTree):
                 next_index = entity_node.next_index
 
         if bbox:
-            entity_nodes = [
-                en for en in entity_nodes
-                if self.all_entity[en.entity_id].intersect(bbox)
-            ]
+            entity_nodes = [en for en in entity_nodes if self.all_entity[en.entity_id].intersect(bbox)]
         return entity_nodes
 
     def __add_entity_node(self, node: QuadNode, entity_id: UID):
@@ -333,7 +301,8 @@ class EntityQuadTree(BaseQuadTree):
                     entity_id=entity_id,
                     next_index=old_index,
                     owner_node=node,
-                ))
+                )
+            )
             return
 
         free_entity_node = self.all_entity_node[self.__free_entity_node_index]
@@ -345,9 +314,7 @@ class EntityQuadTree(BaseQuadTree):
         self.__free_entity_node_index = free_entity_node.next_index
 
         # update the newly allocated entity node's attribute
-        free_entity_node.update(entity_id=entity_id,
-                                next_index=old_index,
-                                owner_node=node)
+        free_entity_node.update(entity_id=entity_id, next_index=old_index, owner_node=node)
 
     def __set_free_entity_nodes(self, indexed_entities: List[Tuple[int, QuadEntityNode]]) -> None:
 
@@ -357,10 +324,7 @@ class EntityQuadTree(BaseQuadTree):
                 owner_qnode.first_child = en.next_index
 
             else:
-                prev_en_node = next(filter(
-                    lambda en: en.next_index == ind,
-                    self._find_entity_node(qnode=owner_qnode)
-                ))
+                prev_en_node = next(filter(lambda en: en.next_index == ind, self._find_entity_node(qnode=owner_qnode)))
                 prev_en_node.next_index = en.next_index
 
             en.set_free(self.__free_entity_node_index)
@@ -379,10 +343,11 @@ class EntityQuadTree(BaseQuadTree):
         return entity_id in self.all_entity.keys()
 
     def __repr__(self) -> str:
-        return (f"{type(self).__name__}("
-                f"num_entity: {self.num_entity}, "
-                f"num_quad_node: {len(self.all_quad_node)},"
-                f"num_entity_node: {len(self.all_entity_node)}, "
-                f"num_quad_node_in_use: {self.num_quad_node_in_use}, "
-                f"num_entity_node_in_use: {self.num_entity_node_in_use})"
-                )
+        return (
+            f"{type(self).__name__}("
+            f"num_entity: {self.num_entity}, "
+            f"num_quad_node: {len(self.all_quad_node)},"
+            f"num_entity_node: {len(self.all_entity_node)}, "
+            f"num_quad_node_in_use: {self.num_quad_node_in_use}, "
+            f"num_entity_node_in_use: {self.num_entity_node_in_use})"
+        )

@@ -5,7 +5,7 @@ from pytree.SpatialPartioningtree.type_hints import Num, Point, UID
 
 class BBox:
 
-    __slots__ = ['x', 'y', 'w', 'h']
+    __slots__ = ["x", "y", "w", "h"]
 
     def __init__(self, x: int, y: int, w: int = 1, h: int = 1):
         if not all(isinstance(pos, (int, float)) for pos in [x, y, w, h]):
@@ -26,24 +26,22 @@ class BBox:
 
     @property
     def midpoint(self) -> Point:
-        return (self.x + self.w)/2, (self.y + self.h)/2
+        return (self.x + self.w) / 2, (self.y + self.h) / 2
 
     @property
     def corner(self) -> Tuple[Point, Point, Point, Point]:
         if self.area == 0:
-            return (
-                (self.x, self.y),
-            )
+            return ((self.x, self.y),)
 
         return (
             (self.x, self.y),  # topleft
             (self.x + self.w, self.y),  # topright
             (self.x, self.y + self.h),  # bottomleft
-            (self.x + self.w, self.y + self.h)  # bottomright
+            (self.x + self.w, self.y + self.h),  # bottomright
         )
 
     @classmethod
-    def get_bbox(cls, *points: Point) -> 'BBox':
+    def get_bbox(cls, *points: Point) -> "BBox":
         points = list(points)
 
         x_sorted = sorted(points, key=lambda p: p[0])
@@ -58,7 +56,7 @@ class BBox:
         return cls(x, y, new_w, new_h)
 
     @classmethod
-    def get_super_bbox(cls, *bbox: 'BBox') -> 'BBox':
+    def get_super_bbox(cls, *bbox: "BBox") -> "BBox":
         x = min(bbox, key=lambda b: b.x).x
         y = min(bbox, key=lambda b: b.y).y
 
@@ -70,13 +68,13 @@ class BBox:
 
         return cls(x, y, new_w, new_h)
 
-    def copy(self) -> 'BBox':
+    def copy(self) -> "BBox":
         return BBox(self.x, self.y, self.w, self.h)
 
     def update(self, **kwargs) -> None:
         [setattr(self, k, v) for k, v in kwargs.items()]
 
-    def trim_ip(self, other: 'BBox') -> None:
+    def trim_ip(self, other: "BBox") -> None:
         px1, py1, px2, py2 = self.x, self.y, self.x + self.w, self.y + self.h
         ox1, oy1, ox2, oy2 = other.x, other.y, other.x + other.w, other.y + other.h
 
@@ -86,7 +84,7 @@ class BBox:
 
         self.update(x=x1, y=y1, w=w, h=h)
 
-    def trim(self, other: 'BBox') -> 'BBox':
+    def trim(self, other: "BBox") -> "BBox":
         px1, py1, px2, py2 = self.x, self.y, self.x + self.w, self.y + self.h
         ox1, oy1, ox2, oy2 = other.x, other.y, other.x + other.w, other.y + other.h
 
@@ -96,7 +94,7 @@ class BBox:
 
         return BBox(x=x1, y=y1, w=w, h=h)
 
-    def split(self, roundoff: Optional[bool] = False) -> List['BBox']:
+    def split(self, roundoff: Optional[bool] = False) -> List["BBox"]:
         w, h = self.w / 2, self.h / 2
 
         ox, oy = self.x, self.y
@@ -113,29 +111,26 @@ class BBox:
             type(self)(cx, cy, w, h),
         ]
 
-    def is_within(self, other: 'BBox') -> float:
+    def is_within(self, other: "BBox") -> float:
         return (
-            other.x <= self.x and
-            other.y <= self.y and
-            other.x + other.w >= self.x + self.w and
-            other.y + other.h >= self.y + self.h
+            other.x <= self.x
+            and other.y <= self.y
+            and other.x + other.w >= self.x + self.w
+            and other.y + other.h >= self.y + self.h
         )
 
-    def intersect(self, other: 'BBox') -> bool:
+    def intersect(self, other: "BBox") -> bool:
         return (
-            self.x < other.x + other.w and
-            self.x + self.w > other.x and
-            self.y < other.y + other.h and
-            self.y + self.h > other.y
+            self.x < other.x + other.w
+            and self.x + self.w > other.x
+            and self.y < other.y + other.h
+            and self.y + self.h > other.y
         )
 
     def enclose(self, point: Point) -> bool:
-        return (
-            self.x + self.w >= point[0] >= self.x and
-            self.y + self.h >= point[1] >= self.y
-        )
+        return self.x + self.w >= point[0] >= self.x and self.y + self.h >= point[1] >= self.y
 
-    def expand(self, point: Point) -> 'BBox':
+    def expand(self, point: Point) -> "BBox":
         if self.area == 0 and self.x == 0 and self.y == 0:
             return BBox(*point, 0, 0)
         return BBox.get_bbox(*self.corner, point)
@@ -150,32 +145,22 @@ class BBox:
             x, y, w, h = expanded_bbox
             self.update(x=x, y=y, w=w, h=h)
 
-    def __eq__(self, other: 'BBox') -> bool:
-        return (
-            self.x == other.x and
-            self.y == other.y and
-            self.w == other.w and
-            self.h == other.h
-        )
+    def __eq__(self, other: "BBox") -> bool:
+        return self.x == other.x and self.y == other.y and self.w == other.w and self.h == other.h
 
-    def __ne__(self, other: 'BBox') -> bool:
-        return (
-            self.x != other.x or
-            self.y != other.y or
-            self.w != other.w or
-            self.h != other.h
-        )
+    def __ne__(self, other: "BBox") -> bool:
+        return self.x != other.x or self.y != other.y or self.w != other.w or self.h != other.h
 
-    def __gt__(self, other: 'BBox') -> bool:
+    def __gt__(self, other: "BBox") -> bool:
         return self.area > other.area
 
-    def __lt__(self, other: 'BBox') -> bool:
+    def __lt__(self, other: "BBox") -> bool:
         return self.area < other.area
 
-    def __ge__(self, other: 'BBox') -> bool:
+    def __ge__(self, other: "BBox") -> bool:
         return self.area >= other.area
 
-    def __le__(self, other: 'BBox') -> bool:
+    def __le__(self, other: "BBox") -> bool:
         return self.area <= other.area
 
     def __hash__(self):
@@ -189,15 +174,14 @@ def get_squared_distance(this_point: Point, that_point: Point) -> float:
     this_dimension = len(this_point)
     that_dimension = len(that_point)
     if this_dimension != that_dimension:
-        raise ValueError('inconsistent dimension of points')
+        raise ValueError("inconsistent dimension of points")
     if this_dimension < 2 or that_dimension < 2:
-        raise ValueError('1 dimensional data points are not supported')
+        raise ValueError("1 dimensional data points are not supported")
 
-    return sum((p1 - p2)**2 for p1, p2 in zip(this_point, that_point))
+    return sum((p1 - p2) ** 2 for p1, p2 in zip(this_point, that_point))
 
 
-def get_closest(this_point: Point, that_point: Point,
-                target_point: Point) -> Tuple[Num, Point]:
+def get_closest(this_point: Point, that_point: Point, target_point: Point) -> Tuple[Num, Point]:
     this_node_dist = get_squared_distance(this_point, target_point)
     that_node_dist = get_squared_distance(that_point, target_point)
 
